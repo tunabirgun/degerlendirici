@@ -159,6 +159,30 @@ async function obsTextLetters(canvas,worker,valid){
  });
  return obsMatchGlyphs(rows,32,10);
 }
+// Accept a PDF text table only when all student IDs, grades and results line up.
+function obsTextLayerRows(items,valid){
+ const tokens=items.filter(t=>t.str?.trim()).map(t=>({
+  text:t.str.trim(),x:t.transform[4],y:t.transform[5],height:Math.max(1,t.height||0)
+ }));
+ const grades=tokens.filter(t=>/^(b\.?\s*notu|başarı notu|harf notu)$/iu.test(t.text));
+ if(grades.length!==1)return null;
+ const grade=grades[0],aligned=(a,b)=>Math.abs(a.y-b.y)<=Math.min(a.height,b.height)*.45;
+ const header=tokens.filter(t=>aligned(t,grade));
+ const id=header.find(t=>/^(ogrenci (no\.?|numarasi)|numara)$/.test(norm(t.text)));
+ const status=header.find(t=>norm(t.text)==='sonuc');
+ if(!id||!status||id.x>=grade.x||grade.x>=status.x)return null;
+ const column=(t,h)=>Math.abs(t.x-h.x)<=Math.min((status.x-grade.x)*.42,h.height*2.25);
+ const body=tokens.filter(t=>t.y<grade.y-grade.height*.5);
+ const ids=body.filter(t=>column(t,id)&&/^\d{5,20}$/.test(t.text));
+ const results=body.filter(t=>column(t,status)&&/^(gecti|kaldi)\.?$/.test(norm(t.text)));
+ const letters=body.filter(t=>column(t,grade)&&valid.includes(t.text.toUpperCase()));
+ if(!ids.length||ids.length!==letters.length||ids.length!==results.length||new Set(ids.map(t=>t.text)).size!==ids.length)return null;
+ const topDown=(a,b)=>b.y-a.y;
+ ids.sort(topDown);letters.sort(topDown);results.sort(topDown);
+ return ids.every((t,i)=>aligned(t,letters[i])&&aligned(t,results[i])&&(!i||!aligned(t,ids[i-1])))
+  ?ids.map((t,i)=>({letter:letters[i].text.toUpperCase(),raw:letters[i].text,source:[t.text,letters[i].text,results[i].text].join(' · ')}))
+  :null;
+}
 function obsFileKey(file){return [file.name,file.size,file.lastModified].join('|')}
 function confirmedObsDistribution(){
  const data=course.obsLetters;
@@ -174,22 +198,30 @@ async function reviewObsLetters(file) {
  try{
   await loadLibrary('pdfjsLib');pdfjsLib.GlobalWorkerOptions.workerSrc='pdf.worker.min.js';
   pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;
-  worker=await createRosterWorker();
   const all=[];
   for(let i=1;i<=pdf.numPages;i++){
    if(!status.isConnected||!modal.open||owner!==course)return;
    status.textContent='Harf notları okunuyor · '+i+' / '+pdf.numPages;
-   const page=await pdf.getPage(i),normal=page.getViewport({scale:1}),v=page.getViewport({scale:3100/Math.max(normal.width,normal.height)});
-   const c=document.createElement('canvas');c.width=Math.round(v.width);c.height=Math.round(v.height);
-   try{await page.render({viewport:v,canvasContext:c.getContext('2d')}).promise;all.push(...await obsPageLetters(c,worker,valid))}
-   finally{c.width=0;page.cleanup()}
+   const page=await pdf.getPage(i);
+   let canvas;
+   try{
+    const text=await page.getTextContent().catch(()=>null);
+    const direct=text&&obsTextLayerRows(text.items,valid);
+    if(direct){all.push(...direct);continue}
+    if(!status.isConnected||!modal.open||owner!==course)return;
+    worker??=await createRosterWorker();
+    const normal=page.getViewport({scale:1}),v=page.getViewport({scale:3100/Math.max(normal.width,normal.height)});
+    canvas=document.createElement('canvas');canvas.width=Math.round(v.width);canvas.height=Math.round(v.height);
+    await page.render({viewport:v,canvasContext:canvas.getContext('2d')}).promise;
+    all.push(...await obsPageLetters(canvas,worker,valid));
+   }finally{if(canvas)canvas.width=0;page.cleanup()}
   }
   if(!status.isConnected||!modal.open||owner!==course)return;
   const rosterCount=new Set((owner.roster||[]).map(r=>r[0])).size;
   const discrepancy=rosterCount&&rosterCount!==all.length
    ?'<p><strong>Ders listesinde '+rosterCount+' öğrenci var.</strong> Kaynak PDF’deki satır sayısını karşılaştırın.</p>':'';
-  const rows=all.map((r,i)=>'<tr><td>'+(i+1)+'</td><td><img alt="Kaynak satır '+(i+1)+'" src="'+r.image+'"></td><td><select title="OCR '+esc(r.raw)+'" aria-label="Satır '+(i+1)+' harf notu" required><option value="">Seçin</option>'+valid.map(l=>'<option '+(l===r.letter?'selected':'')+'>'+esc(l)+'</option>').join('')+'</select></td></tr>').join('');
-  dialog('OBS harf dağılımını kontrol et','<p>'+all.length+' satır okundu. Kaynak görüntüsündeki harfleri kontrol edin. Onayladığınız dağılım rapor ve grafiklerde kullanılır.</p>'+discrepancy+'<form id="obsReview"><table><thead><tr><th>Satır</th><th>Kaynak not satırı</th><th>Harf notu</th></tr></thead><tbody>'+rows+'</tbody></table><button class="primary">Dağılımı kullan</button></form>');
+  const rows=all.map((r,i)=>'<tr><td>'+(i+1)+'</td><td>'+(r.source?esc(r.source):'<img alt="Kaynak satır '+(i+1)+'" src="'+r.image+'">')+'</td><td><select title="Okunan: '+esc(r.raw)+'" aria-label="Satır '+(i+1)+' harf notu" required><option value="">Seçin</option>'+valid.map(l=>'<option '+(l===r.letter?'selected':'')+'>'+esc(l)+'</option>').join('')+'</select></td></tr>').join('');
+  dialog('OBS harf dağılımını kontrol et','<p>'+all.length+' satır okundu. Kaynak satırlardaki harfleri kontrol edin. Onayladığınız dağılım rapor ve grafiklerde kullanılır.</p>'+discrepancy+'<form id="obsReview"><table><thead><tr><th>Satır</th><th>Kaynak not satırı</th><th>Harf notu</th></tr></thead><tbody>'+rows+'</tbody></table><button class="primary">Dağılımı kullan</button></form>');
   $('obsReview').onsubmit=async e=>{
    e.preventDefault();const counts=new Map();
    for(const el of e.target.querySelectorAll('select'))counts.set(el.value,(counts.get(el.value)||0)+1);

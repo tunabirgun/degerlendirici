@@ -331,8 +331,13 @@ async function upload(i,files){
  const priorOpen=opened,priorFilter=filter;
  const sameView=()=>course===owner&&$('modalTitle')===title&&$('gradeDesk')===desk;
  const sameDialog=()=>sameView()&&modal.open===wasOpen;
+ let parsedWorkbook;
  if((i===2||i===4)&&files.length===1&&/\.(pdf|xlsx?|csv)$/i.test(files[0].name)){
-  let roster;try{roster=await readRoster(files[0],false)}catch{}
+  let roster;
+  try{
+   if(/\.pdf$/i.test(files[0].name))roster=await readRoster(files[0],false);
+   else{parsedWorkbook=await readBook(files[0]);roster=rosterWorkbook(parsedWorkbook)}
+  }catch{/* Preserve the uploaded file even if its contents cannot be previewed. */}
   if(course!==owner){notify('Ders değişti. Dosyayı ilgili derste yeniden seçin.');return}
   if(roster?.examList&&roster.entries.length){
    if(sameDialog()&&opened===priorOpen&&filter===priorFilter)showRoster(roster,files[0].name);
@@ -350,10 +355,14 @@ async function upload(i,files){
  if(i===1)await readSyllabus();
  else if(i===4||i===3){
   const file=files.find(f=>/\.(xlsx?|csv)$/i.test(f.name));
-  if(file)await importBook(file);
+  if(file)await importBook(file,parsedWorkbook);
   else if(i===3&&files.length===1&&/\.pdf$/i.test(files[0].name))await reviewObsLetters(files[0]);
  }else if(i===2&&/\.(xlsx?|csv)$/i.test(files[0].name)){
-  const workbook=await readBook(files[0]);
+  let workbook;
+  try{workbook=parsedWorkbook||await readBook(files[0])}catch{
+   if(sameView()&&!modal.open&&opened===i&&filter===0)notify('Dosya saklandı. Devam çizelgesi önizlenemedi.');
+   return;
+  }
   if(sameView()&&!modal.open&&opened===i&&filter===0)dialog('Devam çizelgesi önizlemesi',workbook.SheetNames.map(n=>'<h3>'+esc(n)+'</h3>'+previewTable(matrix(workbook,n).slice(0,8))).join('')+btn('Kapat','modal.close()'));
  }
 }

@@ -43,12 +43,13 @@ function anonymousSheet(rows){
 function sheetFrom(rows){
  const index=rows.findIndex(r=>r.some(v=>/ogrenci.*(no|numara)|^numara$|^student id$/.test(norm(v))));
  if(index<0)return anonymousSheet(rows);
- const header=rows[index],id=header.findIndex(v=>/ogrenci.*(no|numara)|^numara$|^student id$/.test(norm(v))),name=header.findIndex(v=>/ad.*soyad|isim/.test(norm(v)));
+ const header=rows[index],id=header.findIndex(v=>/ogrenci.*(no|numara)|^numara$|^student id$/.test(norm(v))),columns=studentNameColumns(header);
+ if(columns[0]<0)columns[0]=header.findIndex(v=>/ad.*soyad|isim/.test(norm(v)));
  const next=rows[index+1]||[],map=String(next[id]??'').trim()?[]:next;
  const qs=header.flatMap((v,k)=>isQuestionHeader(v)||(!v&&isOutcomeMap(map[k]))?[k]:[]),g=header.findIndex(v=>norm(v).includes('harf')),p=header.findIndex(v=>/ham not|basari (puani|notu)|donem sonu puan/.test(norm(v)));
  if(!qs.length&&g<0&&p<0)return null;
  const mapped=qs.some(k=>isOutcomeMap(map[k])||/öç/i.test(map[k]));
- let lastHeader="";return {grouped:qs.some(k=>!header[k]),questions:qs.map(k=>lastHeader=String(header[k]||lastHeader)),maps:qs.map(k=>mapped?String(map[k]||'').trim().replace(/^[ÖO][ÇC]?\s*(\d+)$/i,(_,n)=>'ÖÇ '+n):''),rows:rows.slice(index+1+(mapped?1:0)).filter(r=>String(r[id]??'').trim()&&!/ortalama|toplam/.test(norm(r[id]))).map(r=>importRowAttendance([String(r[id]),String(r[name]??''),...qs.map(k=>r[k]),r[p]??'',r[g]??''],r,header))};
+ let lastHeader="";return {grouped:qs.some(k=>!header[k]),questions:qs.map(k=>lastHeader=String(header[k]||lastHeader)),maps:qs.map(k=>mapped?String(map[k]||'').trim().replace(/^[ÖO][ÇC]?\s*(\d+)$/i,(_,n)=>'ÖÇ '+n):''),rows:rows.slice(index+1+(mapped?1:0)).filter(r=>String(r[id]??'').trim()&&!/ortalama|toplam/.test(norm(r[id]))).map(r=>importRowAttendance([String(r[id]),studentName(r,columns),...qs.map(k=>r[k]),r[p]??'',r[g]??''],r,header))};
 }
 function isAbsentMark(value){return /^(g|gr|girmedi|katilmadi)$/.test(norm(value))}
 function importRowAttendance(row,source,header){
@@ -82,20 +83,26 @@ function examAverages(sheet){
  return {questions,total,participants};
 }
 let activeSheet='';
-async function importBook(file){
+async function importBook(file,parsedWorkbook){
  const owner=course;
  dialog('Not tablosunu içe aktar','<p id="gradeRead" role="status">Puan tablosu okunuyor…</p>');
  const reading=$('gradeRead'),active=()=>course===owner&&modal.open&&reading.isConnected;
  const pending=Object.create(null);
  try{
-  const workbook=await readBook(file);
+  const workbook=parsedWorkbook||await readBook(file);
+  const knownNames=new Map(owner.roster||[]);
   if(!active())return;
   for(const tab of workbook.SheetNames){
    const sheet=sheetFrom(matrix(workbook,tab));
    if(!sheet)continue;
    sheet.sourceFormat=/\.xlsx$/i.test(file.name)?'xlsx':/\.xls$/i.test(file.name)?'xls':'';
-   let key=tab;
-   for(let i=2;Object.hasOwn(owner.sheets,key)||Object.hasOwn(pending,key);i++)key=tab.slice(0,24)+' ('+i+')';
+   if(!sheet.anonymous)for(const row of sheet.rows){
+    if(!row[1]&&knownNames.has(row[0]))row[1]=knownNames.get(row[0]);
+   }
+   const csv=/\.csv$/i.test(file.name);
+   const title=csv?file.name.slice(0,-4).replace(/[\\/:?*\[\]]/g,' ').trim().slice(0,31)||tab:tab;
+   let key=title;
+   for(let i=2;Object.hasOwn(owner.sheets,key)||Object.hasOwn(pending,key);i++)key=title.slice(0,24)+' ('+i+')';
    pending[key]=sheet;
   }
  }catch{

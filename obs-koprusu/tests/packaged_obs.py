@@ -1,4 +1,8 @@
-"""Exercise a packaged bridge against a synthetic academic portal on loopback."""
+"""Exercise a packaged bridge against a synthetic academic portal on loopback.
+
+Use packaged_obs.py BRIDGE --full-output DIRECTORY for the three-course ZIP check.
+It also needs python-docx, openpyxl, Pillow, pypdf and pypdfium2 in the test interpreter.
+"""
 
 import io
 import json
@@ -68,6 +72,13 @@ def pdf(kind, picked):
 
 
 class Fixture(BaseHTTPRequestHandler):
+    def handle(self):
+        try:
+            super().handle()
+        except ConnectionResetError:
+            # Chromium can close an unused, preconnected loopback socket at exit.
+            pass
+
     def log_message(self, *args):
         pass
 
@@ -174,6 +185,13 @@ def check_package(page, picked):
     )
 
 
+full_run = len(sys.argv) == 4 and sys.argv[2] == "--full-output"
+if full_run:
+    from full_course import COURSES, report_pdf, run_courses
+
+    courses[:] = COURSES
+    pdf = report_pdf
+
 s = ThreadingHTTPServer(("127.0.0.1", 0), Fixture)
 threading.Thread(target=s.serve_forever, daemon=True).start()
 env = {
@@ -232,6 +250,10 @@ try:
         p = b.new_page()
         p.set_default_timeout(45000)
         p.goto(url)
+        if full_run:
+            run_courses(p, Path(sys.argv[3]))
+            b.close()
+            sys.exit(0)
         p.locator("#emptyCourses .obs-connect").click()
         p.locator("#obsCourse option").first.wait_for(state="attached", timeout=280000)
         assert p.locator("#obsPanel").is_hidden()
@@ -342,7 +364,9 @@ finally:
                 and cols[2] == "0.0.0.0:0"
             ):
                 subprocess.run(
-                    ["taskkill", "/PID", cols[4], "/T", "/F"], capture_output=True
+                    ["taskkill", "/PID", cols[4], "/T", "/F"],
+                    check=False,
+                    capture_output=True,
                 )
     else:
         proc.terminate()

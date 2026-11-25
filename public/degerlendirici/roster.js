@@ -20,12 +20,23 @@ function dedupRoster(result){
  result.conflicts=Array.from(alternatives.keys());
  return result;
 }
+function studentNameColumns(header){
+ const labels=header.map(v=>norm(cleanRosterText(v)));
+ const name=labels.findIndex(v=>/^(ogrenci(nin)? )?adi?\s*(ve\s*)?soyadi?$/.test(v));
+ if(name>=0)return [name,-1];
+ const family=labels.findIndex(v=>/^(ogrenci(nin)? )?soyadi?$/.test(v));
+ const given=labels.findIndex(v=>/^(ogrenci(nin)? )?adi?$|^isim$/.test(v));
+ return family>=0&&given>=0?[given,family]:[-1,-1];
+}
+function studentName(row,[name,family]){
+ return cleanRosterText([row[name],row[family]].filter(Boolean).join(' '));
+}
 function rosterWorkbook(w){
  const out=blankRoster();
  for(const tab of w.SheetNames){
   // OBS may store a numeric ID with a zero-padded Excel display format.
   const rows=XLSX.utils.sheet_to_json(w.Sheets[tab],{header:1,defval:'',blankrows:false,raw:false});
-  let id=-1,name=-1,surname=-1;
+  let id=-1,columns=[];
   for(const row of rows){
    if(row.some(v=>norm(v).includes('sinav yoklama listesi')))out.examList=true;
    const labels=row.findIndex(v=>norm(v).includes('ders kodu')&&String(v).includes('\n'));
@@ -37,16 +48,10 @@ function rosterWorkbook(w){
    const headings=row.map(v=>norm(cleanRosterText(v)));
    const k=headings.findIndex(v=>/^(ogrenci (no|numarasi)|numara)\.?$/.test(v));
    if(k>=0){
-    id=k;surname=-1;
-    name=headings.findIndex(v=>/^(ogrenci(nin)? )?ad[i]?\s*(ve\s*)?soyad[i]?$/.test(v));
-    if(name<0){
-     name=headings.findIndex(v=>/^(ogrenci(nin)? )?adi?$/.test(v));
-     surname=headings.findIndex(v=>/^(ogrenci(nin)? )?soyadi?$/.test(v));
-     if(surname<0)name=-1;
-    }
+    id=k;columns=studentNameColumns(row);
     continue;
    }
-   if(id>=0&&name>=0)out.entries.push([row[id],surname<0?row[name]:[row[name],row[surname]].filter(Boolean).join(' ')]);
+   if(id>=0&&columns[0]>=0)out.entries.push([row[id],studentName(row,columns)]);
   }
  }
  return dedupRoster(out);
