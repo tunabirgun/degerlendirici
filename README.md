@@ -2,7 +2,7 @@
 
 Değerlendirici, öğretim elemanlarının her ders için belgeleri toplamasını, sınav puanlarını incelemesini ve ders değerlendirme dosyasını ZIP olarak indirmesini sağlar. İzlenceyi okutur, soru puanlarını öğrenme çıktılarıyla eşleştirir ve Word raporu ile Excel not tablosunu üretir.
 
-[Değerlendirici’yi aç](https://tunabirgun.github.io/degerlendirici/) · [OBS Köprüsü’nü indir (Windows x64)](https://github.com/tunabirgun/degerlendirici/releases/latest/download/Degerlendirici-OBS-Koprusu.exe)
+[Değerlendirici’yi aç](https://tunabirgun.github.io/degerlendirici/) · [OBS Köprüsü’nü indir (Windows x64)](https://github.com/tunabirgun/degerlendirici/releases/latest/download/Degerlendirici-OBS-Koprusu.exe) · [Mac · Apple Silicon](https://github.com/tunabirgun/degerlendirici/releases/latest/download/Degerlendirici-OBS-macOS-arm64.zip) · [Mac · Intel](https://github.com/tunabirgun/degerlendirici/releases/latest/download/Degerlendirici-OBS-macOS-x86_64.zip)
 
 ## İlk ders dosyanızı hazırlayın
 
@@ -15,7 +15,7 @@ Değerlendirici, öğretim elemanlarının her ders için belgeleri toplamasın�
 
 İstanbul Yeni Yüzyıl Üniversitesi OBS akademik panelini kullanıyorsanız köprü, seçtiğiniz dersin belgelerini doğrudan alabilir. Elinizdeki dosyaları yükleyerek çalışmak için web uygulamasını açmanız yeterlidir.
 
-1. **İlk kullanımda** web sayfasında **Köprüyü indir** düğmesine basıp inen `Degerlendirici-OBS-Koprusu.exe` dosyasını açın. Windows x64 için tek dosya, Python ve Chromium’u içerir. Yönetici yetkisi gerekmez. Sonraki kullanımlar için program kendisini kullanıcı klasörüne kopyalar ve **OBS’ye bağlan** bağlantısını tanımlar.
+1. **İlk kullanımda** Windows x64 için tek EXE’yi açın. Sürüm dosyaları bir kez kullanıcı klasörüne çıkarılır. Mac’te **Bu Mac Hakkında** bölümünde Apple çipi veya Intel işlemci yazmasına göre ZIP’i seçin. ZIP’i açıp **Değerlendirici OBS Köprüsü.app** dosyasını Uygulamalar’a taşıyın ve bir kez açın. Mac uygulaması Apple tarafından noterlenmemiştir. Kurumunuzun güvenlik ayarları açılmasını kısıtlayabilir. Her iki platformda da Python pakete dahildir. Köprü sistemdeki Edge veya Chrome’u kullanır. Bunlar açılamazsa ilk bağlantıda Playwright Chromium’u internetten indirip kullanıcı önbelleğinde saklar.
 2. **Sonraki kullanımlarda** web sayfasında **OBS’ye bağlan** düğmesine basın. Tarayıcı onay isterse **Aç** seçeneğini kullanın. Kullanıcı adınızı, şifrenizi ve güvenlik kodunuzu OBS’nin kendi penceresinde girin.
 3. Açılan yerel ders ekranında yılı, dönemi, kaynak dersi ve belgelerin kaydedileceği dersi seçin. **Belgeleri al** ile aktarımı başlatın. Girişten sonra köprü belgeleri arka planda okumayı dener. OBS oturumu bunu desteklemiyorsa giriş yaptığınız pencereyi kullanır.
 
@@ -74,9 +74,9 @@ Web sayfasının ve köprünün açtığı yerel adresin ders kayıtları ayrıd
 
 | Karşılaştığınız durum | Yapılacak işlem |
 | --- | --- |
-| **OBS’ye bağlan** yerel sayfayı açmıyor | Windows x64 paketini indirip bir kez açın. Sonraki açılışta tarayıcının uygulamayı açma isteğini onaylayın. |
+| **OBS’ye bağlan** yerel sayfayı açmıyor | Cihazınıza uygun paketi indirip uygulamayı bir kez açın. Sonraki açılışta tarayıcının uygulamayı açma isteğini onaylayın. |
 | Yerel sayfada bağlantı izni hatası var | Köprüyü yeniden açıp yönlendirildiğiniz sekmeyi kullanın. |
-| Güncellemeden sonra eski arayüz açılıyor | Çalışmanızı kaydedin. Windows’u yeniden başlattıktan sonra indirdiğiniz güncel dosyayı açın. |
+| Güncellemeden sonra eski arayüz açılıyor | Çalışmanızı kaydedin. Bilgisayarı yeniden başlattıktan sonra indirdiğiniz güncel dosyayı açın. |
 | Başka hesaba ait dersler görünüyor | **Farklı hesapla gir** düğmesini kullanın. |
 | Bir rapor boş geldi | Seçili dersin dönemini, şubesini ve programını kontrol edin. OBS’de boş raporlar pakete eklenmez. |
 | Aktarım tamamlanmadı | Sonuç ekranındaki **Tanı bilgisi** ile hata ayrıntılarını inceleyin. **Kalanları yeniden dene** ile eksik belgeleri tekrar isteyin. |
@@ -96,6 +96,8 @@ python obs-koprusu/baslat.py
 ```
 
 **Windows paketini üretmek için** Windows x64 üzerinde temiz bir Python 3.13 ortamında, depo kökünden `.\obs-koprusu\build-windows.ps1` çalıştırın. Tek dosyalık çıktı `dist/Degerlendirici-OBS-Koprusu.exe` altında oluşur.
+
+**Mac paketini üretmek için** macOS’ta temiz bir Python 3.13 ortamında `python -m pip install playwright==1.65.2 pyinstaller==6.22.3` ve `bash obs-koprusu/build-macos.sh` komutlarını çalıştırın. ZIP, derlemenin çalıştığı işlemci mimarisine göre adlandırılır.
 
 Uygulama kodu, Türkçe OCR dosyaları ve belge şablonları `public/degerlendirici/` dizinindedir. GitHub Actions, `main` dalına gönderilen web değişikliklerini GitHub Pages’te yayımlar.
 

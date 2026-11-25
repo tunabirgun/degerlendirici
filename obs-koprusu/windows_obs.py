@@ -2,8 +2,6 @@
 import ctypes
 from ctypes import wintypes
 import os
-import shutil
-import tempfile
 from pathlib import Path
 import sys
 import webbrowser
@@ -16,23 +14,8 @@ def register():
     import winreg
     pythonw = Path(sys.executable).with_name("pythonw.exe")
     if getattr(sys, "frozen", False):
-        # Keep the handler usable after the user removes the downloaded copy.
-        folder = Path(os.environ["LOCALAPPDATA"], "Degerlendirici", "obs-2026.11.25.2")
-        folder.mkdir(parents=True, exist_ok=True)
-        target = folder / "Değerlendirici OBS Köprüsü.exe"
-        source = Path(sys.executable)
-        if source.resolve() != target.resolve() and not target.exists():
-            with tempfile.NamedTemporaryFile(dir=folder, delete=False) as temp:
-                staged = Path(temp.name)
-            try:
-                shutil.copyfile(source, staged)
-                try:
-                    staged.rename(target)
-                except FileExistsError:
-                    pass  # a concurrent first launch completed the same installation
-            finally:
-                staged.unlink(missing_ok=True)
-        command = f'"{target}"'
+        # The single-file launcher has already expanded this runtime atomically.
+        command = f'"{sys.executable}"'
     else:
         command = f'"{pythonw}" "{Path(__file__).resolve()}"'
     root = "Software\\Classes\\" + SCHEME

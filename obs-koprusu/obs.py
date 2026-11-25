@@ -10,6 +10,7 @@ import json
 import os
 import platform
 import re
+import sys
 import shutil
 import tempfile
 import time
@@ -41,7 +42,7 @@ RAPORLAR = {
 HATALAR = {
     "ag": ("OBS sitesine ulaşılamadı.", "İnternet bağlantınızı kontrol edin. OBS bakımda olabilir, birkaç dakika sonra yeniden deneyin."),
     "zaman": ("OBS zamanında yanıt vermedi.", "OBS yoğun olabilir. Birkaç dakika sonra yeniden deneyin."),
-    "tarayici": ("OBS penceresi için uygun tarayıcı bulunamadı.", "Google Chrome veya Microsoft Edge kurun ya da python obs-koprusu/baslat.py komutunu yeniden çalıştırın."),
+    "tarayici": ("OBS penceresi için uygun tarayıcı bulunamadı.", "Tarayıcı hazırlığı tamamlanamadı. İnternet bağlantınızı ve boş disk alanını kontrol edip yeniden deneyin."),
     "pencere": ("OBS penceresi kapatıldı.", "Yeniden bağlanın. Belgeler alınırken pencereyi küçültebilirsiniz, kapatmayın."),
     "giris_suresi": ("Giriş süresi doldu.", "Yeniden bağlanıp güvenlik kodunu girin."),
     "baglanti_yok": ("OBS’ye bağlı değilsiniz.", "OBS penceresinden yeniden giriş yapın."),
@@ -112,7 +113,7 @@ def eski_profilleri_sil() -> None:
 def tarayici_adaylari() -> list[Optional[str]]:
     """Playwright'ın Chromium'u yoksa bilgisayardaki Chrome ya da Edge kullanılır."""
     secim = os.environ.get("OBS_TARAYICI")
-    return [secim] if secim else [None, "chrome", "msedge"]
+    return [secim] if secim else (["msedge", "chrome", None] if os.name == "nt" else ["chrome", "msedge", None])
 
 
 async def tarayici_bul() -> Optional[str]:
@@ -269,18 +270,39 @@ class Obs:
             "autofill": {"profile_enabled": False},
         }), "utf-8")
         self.pw = await async_playwright().start()
+        async def open_browser(channel):
+            self.ctx = await self.pw.chromium.launch_persistent_context(
+                self.profil, headless=GORUNMEZ, channel=channel, accept_downloads=True,
+                viewport={"width": 1366, "height": 900}, locale="tr-TR")
+            self.tarayici = channel or "chromium"
+
         for aday in tarayici_adaylari():
             try:
-                self.ctx = await self.pw.chromium.launch_persistent_context(
-                    self.profil, headless=GORUNMEZ, channel=aday, accept_downloads=True,
-                    viewport={"width": 1366, "height": 900}, locale="tr-TR")
-                self.tarayici = aday or "chromium"
+                await open_browser(aday)
                 break
             except Exception:
                 self.olay(f"tarayıcı açılmadı: {aday or 'chromium'}")
         else:
-            await self.kapat()
-            raise ObsHatasi("tarayici")
+            # Only packaged clients provision the pinned Playwright browser.
+            # Playwright manages the per-user cache, revision and download lock.
+            if not getattr(sys, "frozen", False) or os.environ.get("OBS_TARAYICI"):
+                await self.kapat()
+                raise ObsHatasi("tarayici")
+            from playwright._impl._driver import compute_driver_executable
+            process = await asyncio.create_subprocess_exec(
+                *compute_driver_executable(), "install", "--no-shell", "chromium",
+                stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+                **({"creationflags": 0x08000000} if os.name == "nt" else {}))
+            try:
+                if await asyncio.wait_for(process.wait(), timeout=240):
+                    raise ObsHatasi("tarayici")
+                await open_browser(None)
+            except BaseException:
+                if process.returncode is None:
+                    process.kill()
+                    await process.wait()
+                await self.kapat()
+                raise
         self.olay(f"tarayıcı: {self.tarayici}")
         self.page = self.ctx.pages[0] if self.ctx.pages else await self.ctx.new_page()
 

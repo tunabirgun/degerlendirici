@@ -72,7 +72,7 @@ async function obsDiagnostics(code=''){
 async function obsConnect(reason='',resume=null){
  const retry=()=>obsConnect('',resume);
  const view=obsDialog('OBS’ye bağlan',(reason?'<p role="alert"><strong>'+esc(reason)+'</strong></p>':'')+
-  '<p>Açılan OBS penceresinde kullanıcı adınızı, şifrenizi ve güvenlik kodunu girin. Bu bilgiler Değerlendirici’ye aktarılmaz.'+(resume?' Giriş yaptığınızda kaldığı yerden devam edilir.':'')+'</p><p id="obsStatus" role="status">OBS penceresi açılıyor…</p><p class="sub" id="obsTimeLeft"></p>'+
+  '<p>Açılan OBS penceresinde kullanıcı adınızı, şifrenizi ve güvenlik kodunu girin. Bu bilgiler Değerlendirici’ye aktarılmaz.'+(resume?' Giriş yaptığınızda kaldığı yerden devam edilir.':'')+'</p><p id="obsStatus" role="status">OBS penceresi açılıyor…</p><p class="sub" id="obsTimeLeft">Kullanılabilir tarayıcı yoksa ilk bağlantıda Chromium indirilir.</p>'+
   '<div class="actions">'+obsButton('obsFront','OBS penceresini öne getir','monitor')+obsButton('obsCancel','Vazgeç','x')+'</div>');
  const status=$('obsStatus');
  $('obsFront').onclick=()=>obsJson('one-getir',{}).catch(()=>{});
@@ -310,11 +310,18 @@ function obsDone({received,empty,rosterNote},failed,left,again){
 
 function obsShowLauncher(){
   const launch=document.getElementById('obsLaunch');
-  if(launch&&/Windows/i.test(navigator.userAgent)){
+  const mac = /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints < 2;
+  if(launch && (mac || /Windows/i.test(navigator.userAgent))){
+   if(mac){
+    const download=launch.querySelector('.obs-first');
+    download.href='#obsSetup';
+    download.querySelector('small').textContent='macOS';
+    download.onclick=()=>{ $('obsSetup').open=true };
+   }
    launch.hidden=false;
    launch.querySelector('.obs-open').addEventListener('click',()=>{
     const setup=$('obsSetup');
-    dialog('OBS bağlantısını aç', '<p>Windows onay isterse <strong>Aç</strong> seçeneğini seçin. OBS köprüsü kuruluysa yerel sekme açılır.</p><details open><summary>İlk kez mi kullanıyorsunuz?</summary>'+Array.from(setup.querySelectorAll('p'),p=>p.outerHTML).join('')+'</details>'+btn('Kapat','modal.close()'));
+    dialog('OBS bağlantısını aç', '<p>Tarayıcı onay isterse <strong>Aç</strong> seçeneğini seçin. OBS köprüsü kuruluysa yerel sekme açılır.</p><details open><summary>İlk kez mi kullanıyorsunuz?</summary>'+Array.from(setup.querySelectorAll('p'),p=>p.outerHTML).join('')+'</details>'+btn('Kapat','modal.close()'));
    });
   }
 }

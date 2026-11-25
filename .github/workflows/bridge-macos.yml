@@ -1,0 +1,39 @@
+name: macOS bridge
+on:
+  workflow_dispatch:
+  push:
+    branches: ['bridge-build/**']
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install playwright==1.65.2 pyinstaller==6.22.3 reportlab
+      - run: bash obs-koprusu/build-macos.sh
+      - name: Open the packaged runtime and transfer synthetic OBS documents
+        run: |
+          test "$(uname -m)" = "${{ matrix.arch }}"
+          ditto -x -k "dist/Degerlendirici-OBS-macOS-$(uname -m).zip" "$RUNNER_TEMP/roundtrip"
+          app="$RUNNER_TEMP/roundtrip/Değerlendirici OBS Köprüsü.app"
+          codesign --verify "$app"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$app/Contents/Info.plist" | grep -Fx degerlendirici-obs
+          python obs-koprusu/tests/packaged_obs.py "$app/Contents/Resources/runtime/obs-bridge"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-${{ matrix.arch }}
+          path: dist/*.zip
+          compression-level: 0

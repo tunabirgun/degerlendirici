@@ -3,3 +3,6 @@ dist/
 *.log
 .venv/
 __pycache__/
+
+/build/
+/obs-bridge.spec
