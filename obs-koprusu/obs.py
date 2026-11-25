@@ -212,7 +212,14 @@ JS_BOS_MU = """([rapor, kod]) => {
   if (!html.trim() || rapor === 'egitim_rehberi') return false;
   const d = new DOMParser().parseFromString(html, 'text/html');
   if (rapor === 'not_basari') return !d.body.textContent.includes(kod);
-  return ![...d.querySelectorAll('td')].some(t => !t.querySelector('td') && /\\d{9,}/.test(t.textContent)); }"""
+  // Only discard a report when a recognizable student table has no data rows.
+  // Student numbers may be short or have leading zeroes; unfamiliar layouts must survive.
+  const rows = [...d.querySelectorAll('tr')];
+  const header = rows.find(row => [...row.cells].some(cell =>
+    !cell.querySelector('table') && /^öğrenci\\s*(no\\.?|numarası)$/iu.test(cell.textContent.trim())));
+  if (!header) return false;
+  const following = [...header.closest('table').rows].slice(header.rowIndex + 1);
+  return !following.some(row => [...row.cells].some(cell => cell.textContent.trim())); }"""
 
 JS_PDF = """() => { const v = window.jsStiWebViewer1;
   const s = (v.getDefaultExportSettings && v.getDefaultExportSettings('Pdf')) || {};
