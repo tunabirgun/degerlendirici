@@ -40,6 +40,8 @@ def main():
              "-r", os.path.join(KLASOR, "requirements.txt"), oneri=internet)
     if not dene("-c", "import asyncio, sys, obs; sys.exit(not asyncio.run(obs.tarayici_bul()))"):
         adim("Tarayıcı indiriliyor (bir kez)…", PY, "-m", "playwright", "install", "chromium", oneri=internet)
+    if os.name == "nt":
+        subprocess.run([PY, os.path.join(KLASOR, "windows_obs.py"), "--register"], check=True)
     surec = subprocess.Popen([PY, os.path.join(KLASOR, "sunucu.py"), *sys.argv[1:]])
     while True:
         try:

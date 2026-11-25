@@ -278,7 +278,11 @@ function obsDone({received,empty},failed,left,again){
 }
 
 async function obsDetect(){
- if(location.hostname!=='127.0.0.1')return;
+ if(location.hostname!=='127.0.0.1'){
+  const launch=document.getElementById('obsLaunch');
+  if(launch&&/Windows/i.test(navigator.userAgent))launch.hidden=false;
+  return;
+ }
  let click=()=>obsConnect(),state;
  try{state=await obsJson('durum')}
  catch(error){
@@ -294,5 +298,6 @@ async function obsDetect(){
  obsAvailable=true;
  for(const button of document.querySelectorAll('.obs-only'))button.hidden=false;
  obsConnected(state?.durum==='bagli');
+ if(location.hash==='#obs'){history.replaceState(null,'',location.pathname);click()}
 }
 obsDetect();
