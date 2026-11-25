@@ -315,7 +315,7 @@ async function obsDetect(){
    launch.hidden=false;
    launch.querySelector('a').addEventListener('click',()=>{
     const setup=$('obsSetup');
-    dialog('OBS bağlantısını aç', '<p>Windows onay isterse <strong>Aç</strong> seçeneğini seçin. OBS köprüsü kuruluysa yerel sekme açılır.</p><details><summary>Hiçbir şey açılmadı mı?</summary>'+Array.from(setup.querySelectorAll('p'),p=>p.outerHTML).join('')+'</details>'+btn('Kapat','modal.close()'));
+    dialog('OBS bağlantısını aç', '<p>Windows onay isterse <strong>Aç</strong> seçeneğini seçin. OBS köprüsü kuruluysa yerel sekme açılır.</p><details open><summary>İlk kez mi kullanıyorsunuz?</summary>'+Array.from(setup.querySelectorAll('p'),p=>p.outerHTML).join('')+'</details>'+btn('Kapat','modal.close()'));
    });
   }
   return;

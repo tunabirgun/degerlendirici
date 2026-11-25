@@ -229,6 +229,8 @@ JS_PDF = """() => { const v = window.jsStiWebViewer1;
 class Obs:
     def __init__(self) -> None:
         self.pw = None
+        self.headless_reader = None
+        self.transfer_tried = False
         self.ctx = None
         self.page: Optional[Page] = None
         self.profil: Optional[str] = None
@@ -253,7 +255,7 @@ class Obs:
 
     # ------------------------------------------------------------ bağlantı
     async def _baslat(self) -> None:
-        if self.ctx and self.page and not self.page.is_closed():
+        if not self.headless_reader and self.ctx and self.page and not self.page.is_closed():
             return
         await self.kapat()
         # Her bağlantıda boş bir tarayıcı profili açılır ve kapanışta silinir. Çerez ve şifre saklanmaz.
@@ -285,12 +287,14 @@ class Obs:
     async def kapat(self) -> None:
         if self.bekleme and not self.bekleme.done() and self.bekleme is not asyncio.current_task():
             self.bekleme.cancel()
-        for is_ in ((self.ctx.close if self.ctx else None), (self.pw.stop if self.pw else None)):
+        for is_ in ((self.ctx.close if self.ctx else None), (self.headless_reader.close if self.headless_reader else None), (self.pw.stop if self.pw else None)):
             try:
                 if is_:
                     await is_()
             except Exception:
                 pass
+        self.headless_reader = None
+        self.transfer_tried = False
         profil = self.profil
         self.ctx = self.page = self.pw = self.profil = None
         if profil and not await asyncio.to_thread(profil_sil, profil):
@@ -299,6 +303,8 @@ class Obs:
     async def bagli(self) -> bool:
         # index.aspx adresine doğrudan gidilmez: OBS oturumu düşürüyor.
         try:
+            if self.headless_reader:
+                return bool(self.page and not self.page.is_closed() and "verilen_dersler.aspx" in self.page.url.lower() and await self.page.locator("#cmb_donem").count())
             return bool(self.page and not self.page.is_closed() and ANA_SAYFA.search(self.page.url)
                         and await self.page.locator("#IFRAME1").count())
         except Exception:
@@ -404,6 +410,12 @@ class Obs:
     async def _ders_sayfasi(self, yenile: bool = False) -> Frame:
         if not await self.bagli():
             raise GirisGerekli("pencere" if self.page and self.page.is_closed() else "baglanti_yok")
+        if self.headless_reader:
+            if yenile:
+                await self.page.reload(wait_until="domcontentloaded")
+            if not await self.bagli():
+                raise GirisGerekli("oturum")
+            return self.page.main_frame
         fr = self.page.frame(name="IFRAME1")
         if yenile or not fr or "verilen_dersler.aspx" not in fr.url.lower():
             if fr:
@@ -432,7 +444,30 @@ class Obs:
         except PWTimeout:
             raise ObsHatasi("yapi") from None
         await self._bosta(fr)
-        return fr
+        if self.transfer_tried:
+            return fr
+        self.transfer_tried = True
+        # Test the authenticated course view before releasing the visible login window.
+        # Some OBS installations bind a session to the original window; keep it in that case.
+        original = self.ctx
+        reader = None
+        try:
+            reader = await self.pw.chromium.launch(channel="chromium" if self.tarayici == "chromium" else self.tarayici, headless=True)
+            context = await reader.new_context(storage_state=await original.storage_state(), accept_downloads=True, locale="tr-TR")
+            page = await context.new_page()
+            await page.goto(fr.url, wait_until="domcontentloaded", timeout=15000)
+            await page.locator("#cmb_donem").wait_for(state="attached", timeout=5000)
+            if await page.locator("#txtSecCode").count() or self.ctx is not original:
+                raise RuntimeError("session unavailable")
+        except Exception:
+            if reader:
+                await reader.close()
+            self.olay("okuma: mevcut OBS penceresi")
+            return fr
+        self.ctx, self.page, self.headless_reader = context, page, reader
+        await original.close()
+        self.olay("okuma: arka plan")
+        return page.main_frame
 
     async def _donem_sayfasi(self, donem: str, tazele: bool = False) -> Frame:
         fr = await self._ders_sayfasi()

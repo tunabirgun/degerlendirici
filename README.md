@@ -61,7 +61,11 @@ python -m http.server 8000 --bind 127.0.0.1 --directory public
 
 Yerel köprü, İstanbul Yeni Yüzyıl Üniversitesi OBS akademik panelinden seçilen dersin belgelerini alıp ilgili bölümlere ekler.
 
-#### Hızlı başlangıç
+#### Windows’ta ilk kullanım
+
+[Windows x64 için tek dosyayı indirin](https://github.com/tunabirgun/degerlendirici/releases/download/obs-2026.11.25.1/Degerlendirici-OBS-Koprusu.exe) ve açın. Python, otomasyon bileşenleri, Chromium ve yerel ders arayüzü dosyada bulunur. İlk açılışta program kendi kopyasını kullanıcı hesabınızın yerel uygulama klasörüne alır ve tarayıcıdaki **OBS’ye bağlan** düğmesini tanımlar. Yönetici yetkisi gerekmez. OBS girişini kendi penceresinde tamamlayın. Köprü, dönem ve belgeleri okumak için görünmez tarayıcıya geçer. OBS oturumu başka pencereye aktarılamıyorsa mevcut giriş penceresini kullanır.
+
+#### Kaynaktan çalıştırma
 
 1. [Python 3.10 veya üzerini](https://www.python.org/downloads/) kurun. GitHub’da **Code → Download ZIP** ile projeyi indirip klasöre çıkarın.
 2. Windows’ta `obs-koprusu/baslat.bat`, macOS’ta `obs-koprusu/baslat.command` dosyasına çift tıklayın ya da proje klasöründe aşağıdaki komutu çalıştırın. Windows’ta `py`, macOS ve Linux’ta `python3` gerekebilir. İlk çalıştırma gerekenleri kurar.
@@ -70,7 +74,7 @@ Yerel köprü, İstanbul Yeni Yüzyıl Üniversitesi OBS akademik panelinden se�
    python obs-koprusu/baslat.py
    ```
 
-3. Açılan sayfada **OBS’ye bağlan** düğmesine basın. Kullanıcı adı, şifre ve güvenlik kodunu ayrı açılan OBS penceresine yazın. Bunlar Değerlendirici’ye aktarılmaz. OBS penceresini açık bırakın.
+3. Açılan sayfada **OBS’ye bağlan** düğmesine basın. Kullanıcı adı, şifre ve güvenlik kodunu ayrı açılan OBS penceresine yazın. Bunlar Değerlendirici’ye aktarılmaz.
 4. Değerlendirici’de akademik yılı, dönemi, dersi ve belgeleri seçip **Belgeleri al** düğmesine basın.
 5. **Öğrenci listesini oku** ve **Harf notlarını oku** ile verileri kontrol edip onaylayın.
 6. Kayıtları temizlemek için dersin yanındaki **Sıfırla** düğmesini kullanın. Bitince terminal penceresinde Ctrl+C’ye basın.

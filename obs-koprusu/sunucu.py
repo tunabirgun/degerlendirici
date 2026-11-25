@@ -35,7 +35,7 @@ except ModuleNotFoundError as e:
         raise
     sys.exit("Gerekli bileşen kurulu değil. Şu komut kurup açar:  python obs-koprusu/baslat.py")
 
-KOK = Path(__file__).resolve().parent.parent / "public"
+KOK = (Path(sys._MEIPASS) if getattr(sys, "frozen", False) else Path(__file__).resolve().parent.parent) / "public"
 API = "/api/obs/"
 CEREZ = "obs_koprusu"
 
