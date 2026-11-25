@@ -19,6 +19,7 @@ from collections import deque
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 
 from playwright.async_api import Frame, Page, TimeoutError as PWTimeout, async_playwright
 
@@ -612,6 +613,32 @@ class Obs:
             ekler.append(p)
             p.on("download", indi)
 
+        # Edge may keep an exported file pending in its downloads panel even
+        # after the OBS server has returned it. Consume this viewer's PDF HTTP
+        # response directly. Blob downloads keep their normal Playwright path.
+        async def export_response(route):
+            request = route.request
+            if not request.is_navigation_request() or urlsplit(request.url)[:2] != urlsplit(url)[:2]:
+                await route.continue_()
+                return
+            response = None
+            try:
+                response = await route.fetch(max_redirects=0)
+                body = await response.body()
+                if response.ok and body.startswith(b"%PDF"):
+                    await route.fulfill(status=204, body="")
+                    if not inen.done():
+                        inen.set_result(body)
+                else:
+                    await route.fulfill(response=response)
+            except Exception as exc:
+                if not inen.done():
+                    inen.set_exception(exc)
+                await route.abort()
+            finally:
+                if response is not None:
+                    await response.dispose()
+
         rp.on("download", indi)
         self.ctx.on("page", sayfa_acildi)
         try:
@@ -621,11 +648,15 @@ class Obs:
             except PWTimeout:
                 raise ObsHatasi("goruntuleyici") from None
             bos = await rp.evaluate(JS_BOS_MU, [rapor, kod])
+            if self.tarayici == "msedge":
+                await self.ctx.route("**/*", export_response)
             await rp.evaluate(JS_PDF)
             try:
                 d = await asyncio.wait_for(inen, 120)
             except asyncio.TimeoutError:
                 raise ObsHatasi("dosya_yok") from None
+            if isinstance(d, bytes):
+                return d, bos
             try:
                 icerik = Path(await d.path()).read_bytes()
             finally:
@@ -634,6 +665,8 @@ class Obs:
                 raise ObsHatasi("pdf_degil")
             return icerik, bos
         finally:
+            if self.tarayici == "msedge" and self.ctx:
+                await self.ctx.unroute("**/*", export_response)
             self.ctx.remove_listener("page", sayfa_acildi)
             for p in [rp, *ekler]:
                 try:
