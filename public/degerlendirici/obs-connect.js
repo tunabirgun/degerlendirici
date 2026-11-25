@@ -118,7 +118,7 @@ function obsChoose(terms){
  const view=obsDialog('OBS’den belge al','<form id="obsForm"><div class="fieldpair"><label>Akademik yıl<select id="obsYear">'+
   years.map(y=>'<option '+(y===obsYear(start.ad)?'selected':'')+'>'+esc(y)+'</option>').join('')+'</select></label><label>Dönem<select id="obsTerm"></select></label></div>'+
   '<p id="obsTermNote" hidden>Bu dönem sürüyor. OBS belgeleri henüz tamamlanmamış olabilir.</p>'+
-  '<label>Ders<select id="obsCourse" disabled></select></label><label>Kaydedilecek ders<select id="obsTarget"></select></label>'+
+  '<label>OBS’deki ders<select id="obsCourse" disabled></select></label><label>Kaydedilecek ders<select id="obsTarget"></select></label>'+
   '<fieldset class="obs-documents"><legend>Aktarılacak belgeler</legend>'+obsDocuments.map((d,i)=>'<label><input type="checkbox" name="doc" value="'+i+'" '+((last.docs?last.docs.includes(d.report):d.checked)?'checked':'')+'><span>'+esc(d.title)+' <span class="sub">'+esc(d.help)+'</span></span></label>').join('')+'</fieldset>'+
   '<p id="obsReplace" hidden>Bu derse daha önce OBS’den alınan aynı belgeler yenisiyle değiştirilir.</p><p id="obsStatus" role="status"></p>'+
   '<div class="actions"><button class="primary" id="obsFetch" disabled>'+icon('download')+'Belgeleri al</button>'+obsButton('obsSwitch','Farklı hesapla gir','user-round')+obsButton('obsLeave','Bağlantıyı kapat','x')+'</div></form>');
@@ -131,22 +131,28 @@ function obsChoose(terms){
  async function loadCourses(){
   const request=++loading,term=termBox.value;
   $('obsTermNote').hidden=!terms.find(t=>t.ad===term)?.aktif;
-  courseBox.disabled=$('obsFetch').disabled=true;
+  courseBox.disabled=targetBox.disabled=$('obsFetch').disabled=true;
   courseBox.innerHTML=targetBox.innerHTML='';
   status.textContent='Dersler alınıyor…';
   try{
    const list=await obsJson('dersler',{donem:term},view.signal);
    if(request!==loading||!view.active())return;
    found=list;
-   courseBox.innerHTML=found.map((c,i)=>'<option value="'+i+'">'+esc(c.kod+' · '+c.ad+' · Şube '+c.sube+(found.some(o=>o!==c&&o.kod===c.kod&&o.sube===c.sube)?' · '+c.program:''))+'</option>').join('');
-   courseBox.disabled=$('obsFetch').disabled=!found.length;
+   courseBox.innerHTML=(found.length>1?'<option value="" selected disabled>Ders seçin</option>':'')+found.map((c,i)=>'<option value="'+i+'">'+esc(c.kod+' · '+c.ad+' · Şube '+c.sube+(found.some(o=>o!==c&&o.kod===c.kod&&o.sube===c.sube)?' · '+c.program:''))+'</option>').join('');
+   courseBox.disabled=!found.length;
    status.textContent=found.length?found.length+' ders bulundu.':'Bu dönemde ders bulunamadı. Başka bir dönem seçin.';
    if(found.length)showTargets();
   }catch(error){if(request===loading)obsFailed(error,view,()=>obsConnect())}
  }
  function showTargets(){
-  const c=found[courseBox.value],match=obsMatch(c,termBox.value);
-  targetBox.innerHTML='<option value="">Yeni ders — '+esc(c.kod+' · '+c.ad)+'</option>'+courseList.filter(r=>norm(r.code)===norm(c.kod)).map(r=>'<option value="'+esc(r.id)+'" '+(r===match?'selected':'')+'>'+esc(r.code+' · '+r.name+(r.term?' · '+r.term:'')+(r.obs?' · Şube '+r.obs.sube:''))+'</option>').join('');
+  const c=found[courseBox.value];
+  targetBox.disabled=$('obsFetch').disabled=!c;
+  if(!c){targetBox.innerHTML='';showReplace();return}
+  const targets=obsTargets(c,termBox.value);
+  const linked=targets.filter(r=>r.obs);
+  const uniqueSource=found.filter(other=>norm(other.kod)===norm(c.kod)).length===1;
+  const match=linked.length===1?linked[0]:uniqueSource&&targets.length===1&&targets[0].term?targets[0]:null;
+  targetBox.innerHTML='<option value="">Yeni ders — '+esc(c.kod+' · '+c.ad)+'</option>'+targets.map(r=>'<option value="'+esc(r.id)+'" '+(r===match?'selected':'')+'>'+esc(r.code+' · '+r.name+(r.term?' · '+r.term:'')+(r.obs?' · Şube '+r.obs.sube:''))+'</option>').join('');
   showReplace();
  }
  const showReplace=()=>{$('obsReplace').hidden=!courseList.find(r=>r.id===targetBox.value)?.obs};
@@ -166,13 +172,14 @@ function obsChoose(terms){
  showTerms();
 }
 // A course taken from OBS before is matched by term, section and program. Courses entered by hand have no section.
-function obsMatch(source,term){
+function obsTargets(source,term){
  const {year,season}=parseTerm(term);
- const same=courseList.filter(r=>{
-  const t={...parseTerm(r.term),...r};
-  return norm(r.code)===norm(source.kod)&&t.year===year&&t.season===season;
+ return courseList.filter(r=>{
+  if(norm(r.code)!==norm(source.kod))return false;
+  const stored=parseTerm(r.term),y=r.year||stored.year,s=r.season||stored.season;
+  if((y&&y!==year)||(s&&s!==season))return false;
+  return !r.obs||(r.obs.sube===source.sube&&r.obs.program===source.program);
  });
- return same.find(r=>r.obs?.sube===source.sube&&r.obs?.program===source.program)||same.find(r=>!r.obs);
 }
 
 // earlier: what previous attempts of the same request have already saved
@@ -243,13 +250,12 @@ async function obsFetch(source,term,targetId,docs,earlier={received:[],empty:[]}
 
 async function obsStore(source,term,targetId,received,list){
  const existing=courseList.find(r=>r.id===targetId);
- if(targetId&&!existing)throw new Error('Seçilen ders bulunamadı. Yeniden deneyin.');
+ if(targetId&&!obsTargets(source,term).includes(existing))throw new Error('Ders seçimi değişti. Dönemi ve şubeyi yeniden seçin.');
  const record=existing||fresh(source.ad,source.kod);
  const changes={obs:{sube:source.sube,program:source.program},done:[...record.done],files:record.files.map(group=>[...group])};
- if(!existing){
-  const {year,season}=parseTerm(term);
-  Object.assign(changes,{year,season,title:'',given:'',family:'',term:[year,season].filter(Boolean).join(' ')});
- }
+ const {year,season}=parseTerm(term);
+ Object.assign(changes,{year,season,term:[year,season].filter(Boolean).join(' ')});
+ if(!existing)Object.assign(changes,{title:'',given:'',family:''});
  for(const {doc,file} of received){
   const group=changes.files[doc.section],old=group.findIndex(f=>f.name===file.name);
   if(old<0)group.push(file);

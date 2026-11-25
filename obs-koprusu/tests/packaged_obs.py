@@ -23,7 +23,24 @@ types = [
 ]
 
 
-def pdf(kind):
+courses = [
+    ("SNT101", "Çizim", "1", "Sanat"),
+    ("SNT202", "Tasarım", "1", "Sanat"),
+    ("SNT101", "Çizim", "2", "Sanat"),
+    ("SNT101", "Çizim", "1", "Mimarlık"),
+]
+
+
+def grid_rows():
+    rows = []
+    for i, (code, name, section, program) in enumerate(courses):
+        button = f'<a id="grdDersler_btnPrintFromGrid_{i}" onclick="document.forms[0].elements.picked.value={i}">Yazdır</a>'
+        values = ["2025-2026 Güz", section, code, name, program, button]
+        rows.append("<tr>" + "".join("<td>" + v + "</td>" for v in values) + "</tr>")
+    return "".join(rows)
+
+
+def pdf(kind, picked):
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 
@@ -39,12 +56,12 @@ def pdf(kind):
     b = io.BytesIO()
     c = Canvas(b, invariant=True)
     c.setFont("Arial", 12)
-    c.drawString(60, 740, "SNT101 - " + kind)
+    c.drawString(60, 740, courses[picked][0] + " - " + kind)
     c.drawString(60, 690, "Öğrenci No")
     c.drawString(180, 690, "Ad Soyad")
-    c.drawString(60, 665, "01234567")
+    c.drawString(60, 665, "01234567" if picked == 0 else "02345678")
     c.drawString(180, 665, "Deneme Ada")
-    c.drawString(60, 640, "01234568")
+    c.drawString(60, 640, "01234568" if picked == 0 else "02345679")
     c.drawString(180, 640, "Deneme Bora")
     c.save()
     return b.getvalue()
@@ -73,11 +90,14 @@ class Fixture(BaseHTTPRequestHandler):
         fields = parse_qs(self.rfile.read(int(self.headers["Content-Length"])).decode())
         kind = fields["cmbModalPrintType"][0]
         assert self.path.endswith("verilen_dersler.aspx") and kind in types
-        self.send("prolizPopup('/viewer?" + kind + "')")
+        picked = int(fields["picked"][0])
+        assert 0 <= picked < len(courses)
+        self.send(f"prolizPopup('/viewer?{kind}={picked}')")
 
     def do_GET(self):
         u = urlsplit(self.path)
-        kind = u.query
+        kind, _, value = u.query.partition("=")
+        picked = int(value) if value else 0
         if u.path.endswith("login.aspx"):
             self.send(
                 '<input id=txtSecCode><button id=btnLogin>Sentetik giriş</button><script>setTimeout(()=>location.replace("index.aspx"),1800)</script>'
@@ -96,39 +116,62 @@ class Fixture(BaseHTTPRequestHandler):
                     "<th>" + x + "</th>"
                     for x in ["Dönem", "Şb", "Ders Kodu", "Ders Adı", "Program", ""]
                 )
-                + "</tr><tr>"
-                + "".join(
-                    "<td>" + x + "</td>"
-                    for x in [
-                        "2025-2026 Güz",
-                        "1",
-                        "SNT101",
-                        "Çizim",
-                        "Sanat",
-                        "<a id=grdDersler_btnPrintFromGrid_0>Yazdır</a>",
-                    ]
-                )
-                + "</tr></table><select name=cmbModalPrintType id=cmbModalPrintType>"
+                + "</tr>"
+                + grid_rows()
+                + '</table><input type="hidden" name="picked"><select name="cmbModalPrintType" id="cmbModalPrintType">'
                 + "".join("<option>" + x + "</option>" for x in types)
                 + "</select><select id=cmbModalSinavlar><option>Tüm Sınavlar</option></select></form>"
             )
         elif u.path == "/viewer":
             cells = "<tr><th>Öğrenci No</th><th>Ad Soyad</th></tr>" + (
                 ""
-                if kind == "sinif_basari_ist"
-                else "<tr><td>01234567</td><td>Test Öğrenci SNT101</td></tr>"
+                if kind == "sinif_basari_ist" and picked == 0
+                else f"<tr><td>01234567</td><td>Test Öğrenci {courses[picked][0]}</td></tr>"
             )
             self.send(
                 "<script>window.jsStiWebViewer1={reportParams:{pagesArray:["
                 + json.dumps("<table>" + cells + "</table>")
                 + ']},postExport(){location.href="/download?'
-                + kind
+                + u.query
                 + '";}}</script>'
             )
         elif u.path == "/download":
-            self.send(pdf(kind), "application/pdf", True)
+            self.send(pdf(kind, picked), "application/pdf", True)
         else:
             self.send("")
+
+
+def check_package(page, picked):
+    expected = {
+        k: (1 if k == "egitim_rehber_bologna" else 2 if k == "ou_sinif_listesi" else 3)
+        for k in types
+    }
+    if picked == 0:
+        del expected["sinif_basari_ist"]
+    page.locator("#pack").click()
+    with page.expect_download() as dl:
+        page.get_by_role("button", name="Taslak ZIP indir").click()
+    with zipfile.ZipFile(dl.value.path()) as package:
+        entries = {
+            name: package.read(name)
+            for name in package.namelist()
+            if name.endswith(".pdf") and not name.startswith("0.")
+        }
+        assert len(entries) == len(expected), list(entries)
+        for kind, section in expected.items():
+            matches = [
+                name for name, data in entries.items() if data == pdf(kind, picked)
+            ]
+            assert len(matches) == 1 and matches[0].startswith(f"{section}. "), (
+                kind,
+                matches,
+            )
+    print(
+        courses[picked][0],
+        "verified package section and PDF bytes",
+        expected,
+        flush=True,
+    )
 
 
 s = ThreadingHTTPServer(("127.0.0.1", 0), Fixture)
@@ -192,6 +235,10 @@ try:
         p.locator("#emptyCourses .obs-connect").click()
         p.locator("#obsCourse option").first.wait_for(state="attached", timeout=280000)
         assert p.locator("#obsPanel").is_hidden()
+        assert p.locator("#obsFetch").is_disabled()
+        assert p.locator("#obsCourse option").count() == len(courses) + 1
+        p.locator("#obsCourse").select_option("0")
+        assert p.locator("#obsTarget").input_value() == ""
         for width in (1280, 390, 320):
             p.set_viewport_size({"width": width, "height": 820})
             assert p.locator(".obs-documents label").count() == 5
@@ -221,17 +268,7 @@ try:
         print("Authenticated headless transfer verified", diag["tarayici"], flush=True)
         p.get_by_role("button", name="Kapat", exact=True).last.click()
         p.reload()
-        p.locator("#pack").click()
-        with p.expect_download() as dl:
-            p.get_by_role("button", name="Taslak ZIP indir").click()
-        with zipfile.ZipFile(dl.value.path()) as z:
-            found = {
-                t
-                for t in types
-                if pdf(t) in [z.read(n) for n in z.namelist() if n.endswith(".pdf")]
-            }
-            print("PDF payloads:", found, flush=True)
-            assert found == set(types) - {"sinif_basari_ist"}
+        check_package(p, 0)
         assert p.evaluate("course.roster") == [
             ["01234567", "Deneme Ada"],
             ["01234568", "Deneme Bora"],
@@ -246,6 +283,49 @@ try:
         ]
         print("New exam populated after reload with exact IDs and names.")
         p.locator("#homeLink").click()
+        first_id = p.evaluate("course.id")
+        p.locator("#add").click()
+        for name, value in (
+            ("code", "SNT202"),
+            ("name", "Tasarım"),
+            ("given", "Ada"),
+            ("family", "Deneme"),
+        ):
+            p.locator(f'#form [name="{name}"]').fill(value)
+        p.locator('#form [name="year"]').select_option("2025–2026")
+        p.locator('#form [name="season"]').select_option("Güz")
+        p.locator('#form button[type="submit"]').click()
+        p.wait_for_function("course.code==='SNT202'")
+        second_id = p.evaluate("course.id")
+        p.locator("#selectedCoursePanel .obs-connect").click()
+        course_box = p.locator("#obsCourse")
+        target = p.locator("#obsTarget")
+        for other in ("2", "3"):
+            course_box.select_option(other)
+            assert target.locator("option").count() == 1 and target.input_value() == ""
+        course_box.select_option("0")
+        assert target.input_value() == first_id
+        course_box.select_option("1")
+        assert target.input_value() == second_id
+        for cb in p.locator("input[name=doc]").all():
+            cb.check()
+        p.locator("#obsFetch").click()
+        p.locator("#obsOther").wait_for(timeout=150000)
+        p.get_by_role("button", name="Kapat", exact=True).last.click()
+        p.reload()
+        p.wait_for_function("course?.id===localStorage.selectedCourse")
+        assert (
+            p.evaluate("course.id") == second_id and p.evaluate("course.given") == "Ada"
+        )
+        assert p.evaluate("course.roster.map(r=>r[0])") == ["02345678", "02345679"]
+        check_package(p, 1)
+        p.locator("#courses").select_option(first_id)
+        assert p.evaluate("course.roster.map(r=>r[0])") == ["01234567", "01234568"]
+        check_package(p, 0)
+        print(
+            "Verified selection across two codes, sections, programs and an existing course.",
+            flush=True,
+        )
         p.locator("#selectedCoursePanel .reset-open").click()
         p.locator("#resetForm .primary").click()
         p.wait_for_function("!document.querySelector('#modal').open")

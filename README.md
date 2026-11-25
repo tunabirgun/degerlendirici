@@ -17,7 +17,7 @@ Değerlendirici, öğretim elemanlarının her ders için belgeleri toplamasın�
 
 1. **İlk kullanımda** Windows x64 için tek EXE’yi açın. Sürüm dosyaları bir kez kullanıcı klasörüne çıkarılır. Mac’te **Bu Mac Hakkında** bölümünde Apple çipi veya Intel işlemci yazmasına göre ZIP’i seçin. ZIP’i açıp **Değerlendirici OBS Köprüsü.app** dosyasını Uygulamalar’a taşıyın ve bir kez açın. Mac uygulaması Apple tarafından noterlenmemiştir. Kurumunuzun güvenlik ayarları açılmasını kısıtlayabilir. Her iki platformda da Python pakete dahildir. Köprü sistemdeki Edge veya Chrome’u kullanır. Bunlar açılamazsa ilk bağlantıda Playwright Chromium’u internetten indirip kullanıcı önbelleğinde saklar.
 2. **Sonraki kullanımlarda** web sayfasında **OBS’ye bağlan** düğmesine basın. Tarayıcı onay isterse **Aç** seçeneğini kullanın. Kullanıcı adınızı, şifrenizi ve güvenlik kodunuzu OBS’nin kendi penceresinde girin.
-3. Açılan yerel ders ekranında yılı, dönemi, kaynak dersi ve belgelerin kaydedileceği dersi seçin. **Belgeleri al** ile aktarımı başlatın. Girişten sonra köprü belgeleri arka planda okumayı dener. OBS oturumu bunu desteklemiyorsa giriş yaptığınız pencereyi kullanır.
+3. Önceden ders oluşturmanız gerekmez. Yerel ekranda yılı ve dönemi seçin. Birden fazla ders varsa **OBS’deki ders** listesinden kodu ve şubeyi seçin. **Kaydedilecek ders** alanında **Yeni ders** ile başlayabilir veya aynı kod ve dönemle açtığınız dosyayı kullanabilirsiniz. Önceden OBS’ye bağlanmış farklı şubeler ve programlar ayrı tutulur. **Belgeleri al** ile aktarımı başlatın. Girişten sonra köprü belgeleri arka planda okumayı dener. OBS oturumu bunu desteklemiyorsa giriş yaptığınız pencereyi kullanır.
 
 | OBS belgesi | Değerlendirici’deki yeri |
 | --- | --- |
