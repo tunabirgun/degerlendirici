@@ -99,7 +99,7 @@ async function obsConnect(reason='',resume=null){
   obsFailed(error,view,retry);
  }
 }
-async function obsLeave(){await obsJson('kapat',{}).catch(()=>{});obsConnected(false)}
+async function obsLeave(){await obsJson('kapat',{});obsConnected(false)}
 let obsAvailable=false;
 function obsConnected(on){
  for(const label of document.querySelectorAll('.obs-connect span'))label.textContent=on?'OBS’den belge al':'OBS’ye bağlan';
@@ -153,8 +153,8 @@ function obsChoose(terms){
  targetBox.onchange=showReplace;
  yearBox.onchange=showTerms;termBox.onchange=loadCourses;courseBox.onchange=showTargets;
  // The OBS session stays open while the local server runs, so the next user must be able to leave it.
- $('obsSwitch').onclick=async()=>{$('obsSwitch').disabled=true;await obsLeave();if(view.active())obsConnect()};
- $('obsLeave').onclick=async()=>{await obsLeave();if(view.active())modal.close();notify('OBS bağlantısı kapatıldı.')};
+ $('obsSwitch').onclick=async()=>{$('obsSwitch').disabled=true;try{await obsLeave();if(view.active())obsConnect()}catch(e){obsFailed(e,view,()=>obsChoose(terms))}};
+ $('obsLeave').onclick=async()=>{try{await obsLeave();if(view.active()){modal.close();notify('OBS bağlantısı kapatıldı.')}}catch(e){obsFailed(e,view,()=>obsChoose(terms))}};
  $('obsForm').onsubmit=event=>{
   event.preventDefault();
   if($('obsFetch').disabled)return;

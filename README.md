@@ -96,3 +96,7 @@ Yerel köprü, İstanbul Yeni Yüzyıl Üniversitesi OBS akademik panelinden se�
 | OBS oturumu sürekli kapanıyor | OBS’yi başka sekme veya cihazda kapatın. |
 
 Uygulama kodu, Türkçe OCR dosyaları ve belge şablonları `public/degerlendirici/` dizinindedir. GitHub Actions, `main` dalına gönderilen değişiklikleri GitHub Pages üzerinden yayımlar.
+
+## Katkıda bulunanlar
+
+- [@cihanunlu](https://github.com/cihanunlu) — OBS’den belge aktarımı için yerel köprü ve ders kayıtlarını sıfırlama arayüzü.

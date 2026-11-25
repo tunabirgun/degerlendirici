@@ -16,11 +16,11 @@ function resetView(){
   if(all&&!window.confirm(courseList.length+' ders, tüm belgeleri ve öğrenci kayıtlarıyla birlikte bu cihazdan kalıcı olarak silinsin mi?\n\n'+courseList.map(c=>c.code+' · '+c.name).join('\n')))return;
   form.querySelector('.primary').disabled=true;
   try{
-   if(all)await clearCourses();
    if(choices){
-    localStorage.removeItem('obsChoice');
     await obsLeave();
+    localStorage.removeItem('obsChoice');
    }
+   if(all)await clearCourses();
   }catch(error){
    if(form.isConnected){$('resetStatus').textContent=error.message;form.querySelector('.primary').disabled=false}
    return;
@@ -33,9 +33,20 @@ function resetView(){
 async function clearCourses(){
  await new Promise((resolve,reject)=>{
   const tx=db.transaction('courses','readwrite');
-  tx.objectStore('courses').clear();
+  const expected=new Map(courseList.map(c=>[c.id,c.storageRevision??0]));
+  const store=tx.objectStore('courses');
+  let conflict=false;
+  const cursor=store.openCursor();
+  cursor.onsuccess=()=>{
+   const row=cursor.result;
+   if(row&&expected.get(row.key)===(row.value.storageRevision??0)){
+    expected.delete(row.key);row.continue();return;
+   }
+   if(row||expected.size){conflict=true;tx.abort();return}
+   store.clear();
+  };
   tx.oncomplete=resolve;
-  tx.onabort=()=>reject(new Error('Dersler silinemedi. Yeniden deneyin.'));
+  tx.onabort=()=>reject(new Error(conflict?'Dersler başka bir sekmede değişti. Sayfayı yenileyip tekrar kontrol edin.':'Dersler silinemedi. Yeniden deneyin.'));
  });
  // The import marker of the previous app stays, otherwise old courses would come back on reload.
  courseList=[];course=undefined;opened=-1;filter=0;
