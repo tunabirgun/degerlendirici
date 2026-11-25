@@ -11,7 +11,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-import reportlab
 from playwright.sync_api import sync_playwright
 from reportlab.pdfgen.canvas import Canvas
 
@@ -29,7 +28,13 @@ def pdf(kind):
     from reportlab.pdfbase.ttfonts import TTFont
 
     pdfmetrics.registerFont(
-        TTFont("Arial", str(Path(reportlab.__file__).parent / "fonts" / "Vera.ttf"))
+        TTFont(
+            "Arial",
+            str(
+                Path(__file__).resolve().parents[2]
+                / "public/degerlendirici/print-assets/Tinos-Regular.ttf"
+            ),
+        )
     )
     b = io.BytesIO()
     c = Canvas(b, invariant=True)
@@ -132,7 +137,6 @@ env = {
     **os.environ,
     "PYTHONIOENCODING": "utf-8",
     "OBS_ADRES": f"http://127.0.0.1:{s.server_port}",
-    "OBS_TARAYICI": "chrome",
 }
 import socket
 import tempfile
@@ -154,7 +158,7 @@ else:
 env.update(
     OBS_PORT=str(port), BROWSER=str(capture) + (" %s" if os.name != "nt" else "")
 )
-for var in ["PYTHONPATH", "PYTHONHOME", "OBS_TARAYICI"]:
+for var in ["PYTHONPATH", "PYTHONHOME"]:
     env.pop(var, None)
 env["PATH"] = (
     (os.environ["SystemRoot"] + "\\System32;" + os.environ["SystemRoot"])
@@ -172,13 +176,21 @@ try:
         time.sleep(0.5)
     url = (t / "url").read_text().strip().strip(chr(34)).split("#")[0]
     print("Ready in %.2f seconds" % (time.perf_counter() - start), flush=True)
+    # Reopening the app must reach the same authenticated session.
+    (t / "url").unlink()
+    subprocess.run([str(exe)], env=env, timeout=20, check=True)
+    for _ in range(100):
+        if (t / "url").exists() and (t / "url").read_text().strip():
+            break
+        time.sleep(0.05)
+    assert (t / "url").read_text().strip().strip(chr(34)).split("#")[0] == url
     with sync_playwright() as pw:
         b = pw.chromium.launch(channel="chrome")
         p = b.new_page()
         p.set_default_timeout(45000)
         p.goto(url)
         p.locator("#emptyCourses .obs-connect").click()
-        p.locator("#obsCourse option").first.wait_for(state="attached")
+        p.locator("#obsCourse option").first.wait_for(state="attached", timeout=280000)
         assert p.locator("#obsPanel").is_hidden()
         for width in (1280, 390, 320):
             p.set_viewport_size({"width": width, "height": 820})
@@ -191,7 +203,17 @@ try:
         for cb in p.locator("input[name=doc]").all():
             cb.check()
         p.locator("#obsFetch").click()
-        p.locator("#obsOther").wait_for(timeout=120000)
+        try:
+            p.locator("#obsOther").wait_for(timeout=150000)
+        except Exception:
+            print(p.locator("#modal").inner_text(), flush=True)
+            print(
+                p.evaluate(
+                    "async()=>await(await fetch('/api/obs/tani',{headers:{'X-OBS-Koprusu':'1'}})).json()"
+                ),
+                flush=True,
+            )
+            raise
         diag = p.evaluate(
             "async()=>await(await fetch('/api/obs/tani',{headers:{'X-OBS-Koprusu':'1'}})).json()"
         )

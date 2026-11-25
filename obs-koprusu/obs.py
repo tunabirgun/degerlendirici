@@ -269,6 +269,12 @@ class Obs:
             "profile": {"password_manager_enabled": False},
             "autofill": {"profile_enabled": False},
         }), "utf-8")
+        if getattr(sys, "frozen", False):
+            # Frozen Playwright otherwise looks inside the app, while its CLI
+            # downloads to the user cache. Both must use the same writable path.
+            cache = (Path(os.environ["LOCALAPPDATA"]) if os.name == "nt"
+                     else Path.home() / "Library/Caches") / "ms-playwright"
+            os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", str(cache))
         self.pw = await async_playwright().start()
         async def open_browser(channel):
             self.ctx = await self.pw.chromium.launch_persistent_context(
@@ -285,7 +291,7 @@ class Obs:
         else:
             # Only packaged clients provision the pinned Playwright browser.
             # Playwright manages the per-user cache, revision and download lock.
-            if not getattr(sys, "frozen", False) or os.environ.get("OBS_TARAYICI"):
+            if not getattr(sys, "frozen", False) or os.environ.get("OBS_TARAYICI") not in (None, "chromium"):
                 await self.kapat()
                 raise ObsHatasi("tarayici")
             from playwright._impl._driver import compute_driver_executable

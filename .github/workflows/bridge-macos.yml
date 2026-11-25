@@ -32,6 +32,14 @@ jobs:
           codesign --verify "$app"
           /usr/libexec/PlistBuddy -c 'Print :CFBundleURLTypes:0:CFBundleURLSchemes:0' "$app/Contents/Info.plist" | grep -Fx degerlendirici-obs
           python obs-koprusu/tests/packaged_obs.py "$app/Contents/Resources/runtime/obs-bridge"
+          open -a "$app" --env OBS_PORT=18425 --env OBS_ADRES=http://127.0.0.1:1
+          curl --retry 15 --retry-all-errors --retry-delay 1 -fsS http://127.0.0.1:18425/degerlendirici/ -o /dev/null
+      - name: Verify provisioning on a Mac with an empty Chromium cache
+        if: matrix.arch == 'arm64'
+        env:
+          OBS_TARAYICI: chromium
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/bridge-browser-cache
+        run: python obs-koprusu/tests/packaged_obs.py "$RUNNER_TEMP/roundtrip/Değerlendirici OBS Köprüsü.app/Contents/Resources/runtime/obs-bridge"
       - uses: actions/upload-artifact@v4
         with:
           name: bridge-${{ matrix.arch }}
