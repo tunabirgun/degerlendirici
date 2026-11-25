@@ -10,8 +10,8 @@ class ObsError extends Error{
  constructor({hata,oneri='',kod='',giris=false}){super(hata||'OBS işlemi tamamlanamadı.');this.hint=oneri;this.code=kod;this.login=giris}
 }
 const obsBridgeErrors={
- closed:{kod:'kopru',hata:'Yerel sunucuya ulaşılamadı.',oneri:'Terminal penceresi kapatılmış olabilir. python obs-koprusu/baslat.py komutuyla yeniden başlatın ve açılan sayfayı kullanın. Kayıtlı dersleriniz silinmez.'},
- key:{kod:'anahtar',hata:'Bu sayfanın OBS bağlantı izni yok.',oneri:'Sayfa adres yazılarak açılmış ya da yerel sunucu yeniden başlatılmış. Terminal penceresindeki bağlantıyı açın. Kayıtlı dersleriniz silinmez.'}
+ closed:{kod:'kopru',hata:'Yerel sunucuya ulaşılamadı.',oneri:'Köprüyü yeniden açın ve açılan yerel sekmeden devam edin.'},
+ key:{kod:'anahtar',hata:'Bu sayfanın OBS bağlantı izni yok.',oneri:'Köprüyü tekrar açıp yönlendirildiğiniz sekmeyi kullanın.'}
 };
 
 async function obsRequest(path,body,signal){
@@ -119,7 +119,7 @@ function obsChoose(terms){
   years.map(y=>'<option '+(y===obsYear(start.ad)?'selected':'')+'>'+esc(y)+'</option>').join('')+'</select></label><label>Dönem<select id="obsTerm"></select></label></div>'+
   '<p id="obsTermNote" hidden>Bu dönem sürüyor. OBS belgeleri henüz tamamlanmamış olabilir.</p>'+
   '<label>Ders<select id="obsCourse" disabled></select></label><label>Kaydedilecek ders<select id="obsTarget"></select></label>'+
-  '<fieldset><legend>Belgeler</legend>'+obsDocuments.map((d,i)=>'<label><input type="checkbox" name="doc" value="'+i+'" '+((last.docs?last.docs.includes(d.report):d.checked)?'checked':'')+'><span>'+esc(d.title)+' <span class="sub">'+esc(d.help)+'</span></span></label>').join('')+'</fieldset>'+
+  '<fieldset class="obs-documents"><legend>Aktarılacak belgeler</legend>'+obsDocuments.map((d,i)=>'<label><input type="checkbox" name="doc" value="'+i+'" '+((last.docs?last.docs.includes(d.report):d.checked)?'checked':'')+'><span>'+esc(d.title)+' <span class="sub">'+esc(d.help)+'</span></span></label>').join('')+'</fieldset>'+
   '<p id="obsReplace" hidden>Bu derse daha önce OBS’den alınan aynı belgeler yenisiyle değiştirilir.</p><p id="obsStatus" role="status"></p>'+
   '<div class="actions"><button class="primary" id="obsFetch" disabled>'+icon('download')+'Belgeleri al</button>'+obsButton('obsSwitch','Farklı hesapla gir','user-round')+obsButton('obsLeave','Bağlantıyı kapat','x')+'</div></form>');
  const yearBox=$('obsYear'),termBox=$('obsTerm'),courseBox=$('obsCourse'),targetBox=$('obsTarget'),status=$('obsStatus');
@@ -308,30 +308,31 @@ function obsDone({received,empty,rosterNote},failed,left,again){
  $('obsOther').onclick=()=>obsConnect();
 }
 
-async function obsDetect(){
- if(location.hostname!=='127.0.0.1'){
+function obsShowLauncher(){
   const launch=document.getElementById('obsLaunch');
   if(launch&&/Windows/i.test(navigator.userAgent)){
    launch.hidden=false;
-   launch.querySelector('a').addEventListener('click',()=>{
+   launch.querySelector('.obs-open').addEventListener('click',()=>{
     const setup=$('obsSetup');
     dialog('OBS bağlantısını aç', '<p>Windows onay isterse <strong>Aç</strong> seçeneğini seçin. OBS köprüsü kuruluysa yerel sekme açılır.</p><details open><summary>İlk kez mi kullanıyorsunuz?</summary>'+Array.from(setup.querySelectorAll('p'),p=>p.outerHTML).join('')+'</details>'+btn('Kapat','modal.close()'));
    });
   }
-  return;
- }
+}
+
+async function obsDetect(){
+ if(location.hostname!=='127.0.0.1')return obsShowLauncher();
  let click=()=>obsConnect(),state;
  try{state=await obsJson('durum')}
  catch(error){
   // Opened without the key: explain it on click. Any other local server has no bridge at all.
-  if(error.code!=='anahtar')return;
+  if(error.code!=='anahtar')return obsShowLauncher();
   click=()=>obsFailed(error,{active:()=>true},()=>{});
  }
  for(const button of document.querySelectorAll('.obs-connect')){
   button.hidden=false;
   button.onclick=click;
  }
- if(document.getElementById('obsSetup'))document.getElementById('obsSetup').hidden=true;
+ $('obsPanel').hidden=true;
  obsAvailable=true;
  for(const button of document.querySelectorAll('.obs-only'))button.hidden=false;
  obsConnected(state?.durum==='bagli');

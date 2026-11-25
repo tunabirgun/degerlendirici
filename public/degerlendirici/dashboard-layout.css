@@ -252,6 +252,8 @@
     white-space: nowrap;
   }
 
+  #emptyCourses .actions { grid-column: 1 / -1; flex-wrap: wrap; margin: 0; }
+
   #emptyCourses {
     grid-template-columns: auto minmax(0, 1fr);
     padding: 15px;
@@ -318,10 +320,43 @@
   50% { box-shadow: 0 0 4px 2px color-mix(in srgb, var(--status-color) 40%, transparent); }
 }
 
-#obsSetup { margin: 0 0 1rem; padding: .85rem 1.15rem; }
-#obsSetup summary { cursor: pointer; font-weight: bold; }
-#obsSetup small { font-weight: normal; }
-#obsSetup p { line-height: 1.45; margin: .6rem 0 0; }
-
-#obsLaunch { margin: 0 0 .75rem; }
-#obsLaunch a { display: inline-block; padding: .6rem 1rem; background: #24282e; color: white; border-radius: .45rem; font-weight: bold; }
+/* Keep the optional OBS entry separate from the course-specific controls. */
+#obsPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 24px;
+  padding: 18px 22px;
+  margin-bottom: 22px;
+}
+#obsPanel[hidden] { display: none; }
+.obs-intro, #obsLaunch { display: flex; align-items: center; gap: 12px; }
+.obs-icon { display: grid; place-items: center; width: 38px; height: 38px; flex: none; background: #f0f2f4; border-radius: 8px; }
+.obs-icon svg { width: 20px; }
+.obs-intro h2 { margin: 0; font-size: 19px; }
+.obs-intro p, #obsSetup p { color: #4d5660; margin: .25rem 0 0; line-height: 1.45; }
+#obsLaunch { flex-wrap: wrap; gap: 8px; }
+#obsLaunch a { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border: 1px solid #cfd4da; border-radius: 7px; font-weight: bold; text-decoration: none; }
+#obsLaunch .obs-open { background: #24282e; color: white; border-color: #24282e; }
+#obsLaunch .obs-first { color: #24282e; background: white; }
+.obs-first small { color: #57616c; font-weight: normal; }
+#obsLaunch a:hover { text-decoration: underline; text-underline-offset: 3px; }
+#obsSetup { grid-column: 1 / -1; border-top: 1px solid #e4e7eb; padding-top: 10px; }
+#obsSetup summary { width: fit-content; cursor: pointer; }
+#obsSetup p { max-width: 84ch; margin-top: 8px; }
+#dashboard .row[aria-expanded="true"] { background: #f1f3f5; }
+#dashboard .row[aria-expanded="true"] .rowtitle { text-decoration: underline; text-underline-offset: 3px; }
+#modal .obs-documents { display: grid; gap: 6px; }
+#modal .obs-documents label { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; margin: 0; border: 1px solid #d9dde2; border-radius: 6px; cursor: pointer; }
+#modal .obs-documents label:has(input:checked) { background: #f2f4f6; border-color: #9ea6af; }
+#modal .obs-documents input { flex: none; margin: 3px 0 0; }
+#modal .obs-documents .sub { display: block; margin-top: 2px; font-weight: normal; }
+#obsProgress { list-style: none; padding: 0; }
+#obsProgress li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #e4e7eb; }
+#obsProgress span { flex: none; font-weight: bold; }
+@media (max-width: 800px) {
+  #obsPanel { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+}
+@media (max-width: 420px) {
+  #obsLaunch a { flex: 1 1 100%; }
+}

@@ -17,7 +17,7 @@ def register():
     pythonw = Path(sys.executable).with_name("pythonw.exe")
     if getattr(sys, "frozen", False):
         # Keep the handler usable after the user removes the downloaded copy.
-        folder = Path(os.environ["LOCALAPPDATA"], "Degerlendirici", "obs-2026.11.25.1")
+        folder = Path(os.environ["LOCALAPPDATA"], "Degerlendirici", "obs-2026.11.25.2")
         folder.mkdir(parents=True, exist_ok=True)
         target = folder / "Değerlendirici OBS Köprüsü.exe"
         source = Path(sys.executable)

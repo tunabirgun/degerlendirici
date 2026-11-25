@@ -1,6 +1,8 @@
 # Değerlendirici
 
-Değerlendirici, öğretim elemanlarının her ders için belgeleri toplamasını, sınav puanlarını incelemesini ve ders değerlendirme dosyasını ZIP olarak indirmesini sağlar. Öğrenci bilgileri ve yüklenen belgeler tarayıcıda işlenir. [Uygulamayı aç](https://tunabirgun.github.io/degerlendirici/)
+Değerlendirici, öğretim elemanlarının her ders için belgeleri toplamasını, sınav puanlarını incelemesini ve ders değerlendirme dosyasını ZIP olarak indirmesini sağlar. İzlenceyi okutur, soru puanlarını öğrenme çıktılarıyla eşleştirir ve Word raporu ile Excel not tablosunu üretir.
+
+[Değerlendirici’yi aç](https://tunabirgun.github.io/degerlendirici/) · [OBS Köprüsü’nü indir (Windows x64)](https://github.com/tunabirgun/degerlendirici/releases/latest/download/Degerlendirici-OBS-Koprusu.exe)
 
 ## İlk ders dosyanızı hazırlayın
 
@@ -9,25 +11,42 @@ Değerlendirici, öğretim elemanlarının her ders için belgeleri toplamasın�
 3. **Belge Listesi** üzerinden cevap anahtarlarını ve öğrenci çalışmalarını ilgili sınava bağlayın. Raporu yazarken soru ve sınav ortalamaları ile öğrenme çıktısı eşleştirmelerinden yararlanın.
 4. **Paket durumu** üzerinden eksikleri gözden geçirin. **Paketi İndir** seçili derse ait belgeleri tek bir ZIP içinde toplar. Eksik bölümler varken de paket alabilirsiniz.
 
+## OBS’den belge aktarımı
+
+İstanbul Yeni Yüzyıl Üniversitesi OBS akademik panelini kullanıyorsanız köprü, seçtiğiniz dersin belgelerini doğrudan alabilir. Elinizdeki dosyaları yükleyerek çalışmak için web uygulamasını açmanız yeterlidir.
+
+1. **İlk kullanımda** web sayfasında **Köprüyü indir** düğmesine basıp inen `Degerlendirici-OBS-Koprusu.exe` dosyasını açın. Windows x64 için tek dosya, Python ve Chromium’u içerir. Yönetici yetkisi gerekmez. Sonraki kullanımlar için program kendisini kullanıcı klasörüne kopyalar ve **OBS’ye bağlan** bağlantısını tanımlar.
+2. **Sonraki kullanımlarda** web sayfasında **OBS’ye bağlan** düğmesine basın. Tarayıcı onay isterse **Aç** seçeneğini kullanın. Kullanıcı adınızı, şifrenizi ve güvenlik kodunuzu OBS’nin kendi penceresinde girin.
+3. Açılan yerel ders ekranında yılı, dönemi, kaynak dersi ve belgelerin kaydedileceği dersi seçin. **Belgeleri al** ile aktarımı başlatın. Girişten sonra köprü belgeleri arka planda okumayı dener. OBS oturumu bunu desteklemiyorsa giriş yaptığınız pencereyi kullanır.
+
+| OBS belgesi | Değerlendirici’deki yeri |
+| --- | --- |
+| Ders Yoklama Listesi | PDF, Öğrenci Devam Çizelgesi’ne eklenir. Okunan öğrenci numaraları ve adlar yeni sınavların not tablosunda kullanılabilir. |
+| Sınav Not Listesi | Harf Notları ve İstatistikler’e eklenir. **Harf notlarını oku** ile dağılımı inceleyebilirsiniz. |
+| Sınıf Başarı İstatistikleri ve Not Başarı İstatistikleri | İki PDF, Harf Notları ve İstatistikler’de saklanır. |
+| Eğitim Rehberi | Ders İzlencesi’ne eklenir. |
+
+Aktarım sonunda eklenen ve OBS’de boş çıkan belgeleri görebilirsiniz. **Öğrenci listesini incele** ile kimlik bilgilerini kontrol edebilir, kısmi aktarımda **Kalanları yeniden dene** ile devam edebilirsiniz.
+
 ## Dosyanın sekiz bölümü
 
 ### 1. Dosya Kapağı ve Belgeler Listesi
 
-Öğretim elemanının unvanını, adlarını ve soyadlarını ayrı işler. kapakta soyadlarını büyük harfle yazar. Kapak şablonunda öğrenci faaliyeti türleri seçilebilir ve “Diğer” için açıklama yazılabilir. Kapak PDF veya Word olarak indirilebilir.
+Öğretim elemanının unvanını, adlarını ve soyadlarını ayrı işler. Kapakta soyadlarını büyük harfle yazar. Kapak şablonunda öğrenci faaliyeti türleri seçilebilir ve “Diğer” için açıklama yazılabilir. Kapak PDF veya Word olarak indirilebilir.
 
 ### 2. Ders İzlencesi
 
 Yeni ders açarken veya mevcut derste izlence seçilebilir. DOCX dosyalarında metni, tabloları ve numaralı listeleri okur. Metin içeren PDF ve TXT dosyalarından yazıyı doğrudan alır. Taranmış sayfa ve görüntülerde tarayıcıda çalışan Türkçe OCR kullanır. Bulabildiği ders adını, kodunu, akademik yılı, dönemi ve sorumlu öğretim elemanını forma aktarır.
 
-**Öğrenme çıktıları.** Araç numaralı ana ÖÇ’leri ayıklar, “a”, “b” gibi alt maddeleri dışarıda bırakmaya çalışır. Öğretim elemanı sonuçları gözden geçirir. her çıktının numarasını ve metnini ayrı ayrı düzeltebilir veya yeni çıktı ekleyebilir. Taramanın kalitesi ve belgenin düzeni tanımayı etkiler.
+**Öğrenme çıktıları.** Araç numaralı ana ÖÇ’leri ayıklar, “a”, “b” gibi alt maddeleri dışarıda bırakmaya çalışır. Öğretim elemanı sonuçları gözden geçirir. Her çıktının numarasını ve metnini ayrı ayrı düzeltebilir veya yeni çıktı ekleyebilir. Taramanın kalitesi ve belgenin düzeni tanımayı etkiler.
 
 ### 3. Öğrenci Devam Çizelgesi
 
-OBS ders veya sınav yoklamasından öğrenci numarası ve ad-soyad okuyabilir. XLS, XLSX, CSV, PDF ve taranmış PNG, JPG veya WebP desteklenir. Taramalarda OCR kullanılır. Okunan liste aktarım öncesinde gösterilir. aynı numara için farklı adlar varsa kullanıcı doğru kaydı seçebilir. Liste yeni sınavlara temel olur. İstenirse mevcut sınavlara eksik öğrenciler eklenir ve girilmiş puanlar korunur.
+OBS ders veya sınav yoklamasından öğrenci numarası ve ad-soyad okuyabilir. XLS, XLSX, CSV, PDF ve taranmış PNG, JPG veya WebP desteklenir. Taramalarda OCR kullanılır. Okunan liste aktarım öncesinde gösterilir. Aynı numara için farklı adlar varsa kullanıcı doğru kaydı seçebilir. Liste yeni sınavlara temel olur. İstenirse mevcut sınavlara eksik öğrenciler eklenir ve girilmiş puanlar korunur.
 
 ### 4. Dönem Sonu Harf Notları ve İstatistikler
 
-Uygun OBS harf notu PDF’sinden dağılımı okur ve onaya sunar. Not tablosundaki harfleri veya sayısal dönem sonu puanları için seçili baremi kullanabilir. Sınav ağırlıkları toplamı %100 olduğunda ve gerekli puanlar tam olduğunda ağırlıklı sonuç hesaplayabilir. Varsayılan eşikler düzenlenebilir. Harf başına öğrenci sayısını ve yüzdesini gösterir. sütun ve pasta grafiklerini oluşturur. Grafikler rapora ve ZIP’e eklenebilir.
+Uygun OBS harf notu PDF’sinden dağılımı okur ve onaya sunar. Not tablosundaki harfleri veya sayısal dönem sonu puanları için seçili baremi kullanabilir. Sınav ağırlıkları toplamı %100 olduğunda ve gerekli puanlar tam olduğunda ağırlıklı sonuç hesaplayabilir. Varsayılan eşikler düzenlenebilir. Harf başına öğrenci sayısını ve yüzdesini gösterir. Sütun ve pasta grafiklerini oluşturur. Grafikler rapora ve ZIP’e eklenebilir.
 
 ### 5. Faaliyet ve Not Tablosu
 
@@ -39,7 +58,7 @@ Vize, final, mazeret, bütünleme ve diğer faaliyetler ayrı sayfalarda tanıml
 
 ### 7. Cevap Anahtarları
 
-Her dosya bir sınava, istenirse bir veya birkaç soruya bağlanabilir. Soru seçimi boş bırakılırsa anahtar tüm sınava ait kabul edilir. Önerilen paket adı yükleme sırasında gösterilir. örneğin “Final Sınavı Cevap Anahtarı.pdf”.
+Her dosya bir sınava, istenirse bir veya birkaç soruya bağlanabilir. Soru seçimi boş bırakılırsa anahtar tüm sınava ait kabul edilir. Önerilen paket adı yükleme sırasında gösterilir (örneğin “Final Sınavı Cevap Anahtarı.pdf”).
 
 ### 8. Öğrenci Faaliyet Örnekleri
 
@@ -47,59 +66,38 @@ Her dosya bir sınava, istenirse bir veya birkaç soruya bağlanabilir. Soru se�
 
 ## Kayıtlar ve gizlilik
 
-Dersler, puanlar ve belgeler cihazdaki tarayıcı profilinde IndexedDB ile saklanır. OCR ve belge üretimi aynı cihazda çalışır. Tarayıcının site verilerini temizlemek kayıtları siler. Saklamak istediğiniz belgelerin ZIP çıktısını ayrıca indirin.
+Dersler, puanlar ve belgeler tarayıcı profilinde IndexedDB ile saklanır. OCR ve belge üretimi cihazda çalışır. Köprü yalnızca `127.0.0.1` adresini dinler ve OBS hesabınız üzerinden listeleme ve yazdırma işlemleri yapar.
 
-## Yerelde çalıştırma
+Web sayfasının ve köprünün açtığı yerel adresin ders kayıtları ayrıdır. Daha önce çalıştığınız derse ulaşmak için aynı adresi ve tarayıcı profilini kullanın. Site verilerini temizlemeden önce saklamak istediğiniz derslerin ZIP paketlerini indirin.
 
-Proje klasöründe Python 3 ile aşağıdaki komutu çalıştırıp [yerel uygulamayı](http://127.0.0.1:8000/degerlendirici/) açın.
+## Sorun giderme
+
+| Karşılaştığınız durum | Yapılacak işlem |
+| --- | --- |
+| **OBS’ye bağlan** yerel sayfayı açmıyor | Windows x64 paketini indirip bir kez açın. Sonraki açılışta tarayıcının uygulamayı açma isteğini onaylayın. |
+| Yerel sayfada bağlantı izni hatası var | Köprüyü yeniden açıp yönlendirildiğiniz sekmeyi kullanın. |
+| Güncellemeden sonra eski arayüz açılıyor | Çalışmanızı kaydedin. Windows’u yeniden başlattıktan sonra indirdiğiniz güncel dosyayı açın. |
+| Başka hesaba ait dersler görünüyor | **Farklı hesapla gir** düğmesini kullanın. |
+| Bir rapor boş geldi | Seçili dersin dönemini, şubesini ve programını kontrol edin. OBS’de boş raporlar pakete eklenmez. |
+| Aktarım tamamlanmadı | Sonuç ekranındaki **Tanı bilgisi** ile hata ayrıntılarını inceleyin. **Kalanları yeniden dene** ile eksik belgeleri tekrar isteyin. |
+
+## Kaynaktan çalıştırma
+
+**Yalnızca web arayüzü.** Depo kökünden şu komutu çalıştırıp [yerel sayfayı](http://127.0.0.1:8000/degerlendirici/) açın.
 
 ```sh
 python -m http.server 8000 --bind 127.0.0.1 --directory public
 ```
 
-### OBS’den belge alma (isteğe bağlı)
+**Yerel OBS köprüsü.** Kaynaktan başlatmak için Python 3.10 veya üzeriyle aşağıdaki komutu çalıştırın. İlk açılışta başlatıcı bağımlılıkları hazırlar. macOS ve Linux’ta komut adı `python3` olabilir.
 
-Yerel köprü, İstanbul Yeni Yüzyıl Üniversitesi OBS akademik panelinden seçilen dersin belgelerini alıp ilgili bölümlere ekler.
+```sh
+python obs-koprusu/baslat.py
+```
 
-#### Windows’ta ilk kullanım
+**Windows paketini üretmek için** Windows x64 üzerinde temiz bir Python 3.13 ortamında, depo kökünden `.\obs-koprusu\build-windows.ps1` çalıştırın. Tek dosyalık çıktı `dist/Degerlendirici-OBS-Koprusu.exe` altında oluşur.
 
-[Windows x64 için tek dosyayı indirin](https://github.com/tunabirgun/degerlendirici/releases/download/obs-2026.11.25.1/Degerlendirici-OBS-Koprusu.exe) ve açın. Python, otomasyon bileşenleri, Chromium ve yerel ders arayüzü dosyada bulunur. İlk açılışta program kendi kopyasını kullanıcı hesabınızın yerel uygulama klasörüne alır ve tarayıcıdaki **OBS’ye bağlan** düğmesini tanımlar. Yönetici yetkisi gerekmez. OBS girişini kendi penceresinde tamamlayın. Köprü, dönem ve belgeleri okumak için görünmez tarayıcıya geçer. OBS oturumu başka pencereye aktarılamıyorsa mevcut giriş penceresini kullanır.
-
-#### Kaynaktan çalıştırma
-
-1. [Python 3.10 veya üzerini](https://www.python.org/downloads/) kurun. GitHub’da **Code → Download ZIP** ile projeyi indirip klasöre çıkarın.
-2. Windows’ta `obs-koprusu/baslat.bat`, macOS’ta `obs-koprusu/baslat.command` dosyasına çift tıklayın ya da proje klasöründe aşağıdaki komutu çalıştırın. Windows’ta `py`, macOS ve Linux’ta `python3` gerekebilir. İlk çalıştırma gerekenleri kurar.
-
-   ```sh
-   python obs-koprusu/baslat.py
-   ```
-
-3. Açılan sayfada **OBS’ye bağlan** düğmesine basın. Kullanıcı adı, şifre ve güvenlik kodunu ayrı açılan OBS penceresine yazın. Bunlar Değerlendirici’ye aktarılmaz.
-4. Değerlendirici’de akademik yılı, dönemi, dersi ve belgeleri seçip **Belgeleri al** düğmesine basın.
-5. **Öğrenci listesini oku** ve **Harf notlarını oku** ile verileri kontrol edip onaylayın.
-6. Kayıtları temizlemek için dersin yanındaki **Sıfırla** düğmesini kullanın. Bitince terminal penceresinde Ctrl+C’ye basın.
-
-#### Nasıl çalışır?
-
-- Köprü yalnızca 127.0.0.1 adresini dinler ve OBS’de yalnızca listeleme ve yazdırma işlemlerini kullanır.
-- Alınan PDF’ler doğrudan tarayıcıdaki ders kaydına eklenir. OBS penceresinin profili bağlantı kapanınca silinir.
-- Oturum yarıda kapanırsa alınan belgeler kaydedilir, yeniden girişten sonra kalanlardan devam edilir.
-- Düğme GitHub Pages sürümünde görünmez. Kayıtlar tarayıcıda siteye göre ayrı saklandığından, iki sürümdeki dersler ortak değildir.
-
-**Sorun giderme.** `python obs-koprusu/baslat.py --tani` kurulumu ve OBS erişimini denetler. Uygulamadaki **Tanı bilgisi** düğmesi, öğrenci, ders ve hesap bilgisi içermeyen bir metin hazırlar.
-
-| Durum | Yapılacak |
-|---|---|
-| Düğme “OBS bağlantı izni yok” diyor | Terminal penceresindeki bağlantıyı açın. |
-| Yerel sunucuya ulaşılamadı | Komutu yeniden çalıştırın. Dersler silinmez. |
-| Başka öğretim elemanının dersleri geliyor | OBS oturumu açık kalmıştır. **Farklı hesapla gir** düğmesini kullanın. |
-| Eski dersler veya seçimler görünüyor | **Sıfırla** ile son seçimleri ya da tarayıcıdaki tüm dersleri temizleyin. |
-| Dersler görünmüyor | Her zamanki adresi ve bağlantı noktasını kullandığınızdan emin olun. |
-| “Verilen Dersler” bulunamadı | OBS dilini Türkçe yapın. |
-| Belge boş | Bu şubede kayıtlı öğrenci veya girilmiş veri yoktur. Diğer şube ya da programı deneyin. |
-| OBS oturumu sürekli kapanıyor | OBS’yi başka sekme veya cihazda kapatın. |
-
-Uygulama kodu, Türkçe OCR dosyaları ve belge şablonları `public/degerlendirici/` dizinindedir. GitHub Actions, `main` dalına gönderilen değişiklikleri GitHub Pages üzerinden yayımlar.
+Uygulama kodu, Türkçe OCR dosyaları ve belge şablonları `public/degerlendirici/` dizinindedir. GitHub Actions, `main` dalına gönderilen web değişikliklerini GitHub Pages’te yayımlar.
 
 ## Katkıda bulunanlar
 
