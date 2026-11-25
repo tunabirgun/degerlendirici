@@ -290,6 +290,7 @@ async function obsDetect(){
   button.hidden=false;
   button.onclick=click;
  }
+ if(document.getElementById('obsSetup'))document.getElementById('obsSetup').hidden=true;
  obsAvailable=true;
  for(const button of document.querySelectorAll('.obs-only'))button.hidden=false;
  obsConnected(state?.durum==='bagli');

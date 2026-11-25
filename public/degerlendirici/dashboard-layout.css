@@ -317,3 +317,8 @@
 @keyframes review-glow {
   50% { box-shadow: 0 0 4px 2px color-mix(in srgb, var(--status-color) 40%, transparent); }
 }
+
+#obsSetup { margin: 0 0 1rem; padding: .85rem 1.15rem; }
+#obsSetup summary { cursor: pointer; font-weight: bold; }
+#obsSetup small { font-weight: normal; }
+#obsSetup p { line-height: 1.45; margin: .6rem 0 0; }
