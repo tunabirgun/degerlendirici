@@ -209,16 +209,27 @@ async function obsFetch(source,term,targetId,docs,earlier={received:[],empty:[]}
  }
  if(!view.active())return;
  // Whatever arrived is saved before any error is shown.
- let saved=null;
+ let saved=null,rosterNote=earlier.rosterNote||'';
  if(received.length){
   $('obsStop').disabled=true;
-  try{saved=await obsStore(source,term,targetId,received)}
+  try{
+   const sourceFile=received.find(r=>r.doc.report==='ders_yoklama')||received.find(r=>r.doc.report==='sinav_not');
+   let list;
+   if(sourceFile){
+    status.textContent='Öğrenci numaraları ve adları okunuyor…';
+    try{list=await readRoster(sourceFile.file,true)}catch{/* The original PDF can still be filed. */}
+    if(!view.active())return;
+   }
+   const result=await obsStore(source,term,targetId,received,list);
+   saved=result.record;
+   if(sourceFile)rosterNote=result.rosterNote;
+  }
   catch(error){obsFailed(error,view,()=>obsFetch(source,term,targetId,docs,earlier),received.map(r=>r.file));return}
   course=saved;localStorage.selectedCourse=saved.id;opened=received[0].doc.section;filter=0;
   render();
  }
  if(!view.active())return;
- const result={received:[...earlier.received,...received],empty};
+ const result={received:[...earlier.received,...received],empty,rosterNote};
  const again=list=>obsFetch(source,term,saved?.id||targetId,list,result);
  if(interrupted){
   obsConnected(false);
@@ -230,7 +241,7 @@ async function obsFetch(source,term,targetId,docs,earlier={received:[],empty:[]}
  obsDone(result,failed,left,again);
 }
 
-async function obsStore(source,term,targetId,received){
+async function obsStore(source,term,targetId,received,list){
  const existing=courseList.find(r=>r.id===targetId);
  if(targetId&&!existing)throw new Error('Seçilen ders bulunamadı. Yeniden deneyin.');
  const record=existing||fresh(source.ad,source.kod);
@@ -248,15 +259,35 @@ async function obsStore(source,term,targetId,received){
   }
   changes.done[doc.section]=false;
  }
+ let rosterNote='Öğrenci listesi için belgeyi gözden geçirin.';
+ if(list?.entries.length&&!list.scanned&&!list.conflicts.length&&(!list.code||norm(list.code)===norm(source.kod))){
+  const refs=rosterReferences(record);
+  const consistent=list.entries.every(([id,name])=>{
+   const ref=refs.get(id);
+   return name&&[ref?.name,...(ref?.sheets||[])].every(other=>!other||norm(name)===norm(other));
+  });
+  if(consistent){
+   const roster=new Map(record.roster||[]);
+   for(const [id,name] of list.entries)if(!roster.has(id))roster.set(id,name);
+   changes.roster=Array.from(roster);
+   changes.sheets={...record.sheets};
+   for(const [key,sheet] of Object.entries(record.sheets)){
+    const updated={...sheet};
+    mergeRoster(updated,list.entries);
+    if(updated.rows!==sheet.rows){changes.sheets[key]=updated;changes.done[4]=false}
+   }
+   rosterNote=list.entries.length+' öğrencinin numarası ve adı not tablosu için hazır. Yeni sınavlarda bu liste açılır.';
+  }
+ }
  const before=Object.fromEntries(Object.keys(changes).map(key=>[key,record[key]]));
  Object.assign(record,changes);
  try{await persist(record)}catch(error){Object.assign(record,before);throw error}
  if(!existing)courseList.push(record);
- return record;
+ return {record,rosterNote};
 }
 
-function obsDone({received,empty},failed,left,again){
- const roster=received.findLast(r=>r.doc.report==='ders_yoklama')?.file;
+function obsDone({received,empty,rosterNote},failed,left,again){
+ const roster=(received.findLast(r=>r.doc.report==='ders_yoklama')||received.findLast(r=>r.doc.report==='sinav_not'))?.file;
  const letters=received.findLast(r=>r.doc.report==='sinav_not')?.file;
  const list=items=>'<ul class="package-checklist">'+items.map(text=>'<li>'+esc(text)+'</li>').join('')+'</ul>';
  const remaining=[...failed.map(f=>f.doc),...left];
@@ -266,9 +297,9 @@ function obsDone({received,empty},failed,left,again){
   (empty.length?'<h3>OBS’de boş olanlar</h3>'+list(empty.map(d=>d.title))+'<p>Bu şubede kayıtlı öğrenci ya da girilmiş veri görünmüyor, bu yüzden eklenmedi. Ders birden çok şube veya programda açıldıysa diğerini deneyin.</p>':'')+
   (failed.length?'<h3>Alınamayanlar</h3>'+list(failed.map(f=>f.doc.title+': '+f.error.message))+hints.map(h=>'<p>'+esc(h)+'</p>').join(''):'')+
   (left.length?'<h3>Durdurulduğu için alınmayanlar</h3>'+list(left.map(d=>d.title)):'')+
-  (received.length?'<p>Belgeler kontrol edilmek üzere bölümlerine eklendi. Öğrenci listesini ve harf notlarını aşağıdan okutabilirsiniz.</p>':'')+
+  (rosterNote?'<p role="status">'+esc(rosterNote)+'</p>':'')+
   '<div class="actions">'+(remaining.length?obsButton('obsAgain','Kalanları yeniden dene','refresh-cw'):'')+
-  (roster?obsButton('obsRoster','Öğrenci listesini oku','users'):'')+(letters?obsButton('obsLetters','Harf notlarını oku','scan-text'):'')+
+  (roster?obsButton('obsRoster','Öğrenci listesini incele','users'):'')+(letters?obsButton('obsLetters','Harf notlarını oku','scan-text'):'')+
   obsButton('obsOther','Başka ders','plug')+(failed.length?obsButton('obsHelp','Tanı bilgisi','clipboard-list'):'')+btn('Kapat','modal.close()')+'</div>');
  if(remaining.length)$('obsAgain').onclick=()=>again(remaining);
  if(roster)$('obsRoster').onclick=()=>inspectRoster(roster);
@@ -280,7 +311,13 @@ function obsDone({received,empty},failed,left,again){
 async function obsDetect(){
  if(location.hostname!=='127.0.0.1'){
   const launch=document.getElementById('obsLaunch');
-  if(launch&&/Windows/i.test(navigator.userAgent))launch.hidden=false;
+  if(launch&&/Windows/i.test(navigator.userAgent)){
+   launch.hidden=false;
+   launch.querySelector('a').addEventListener('click',()=>{
+    const setup=$('obsSetup');
+    dialog('OBS bağlantısını aç', '<p>Windows onay isterse <strong>Aç</strong> seçeneğini seçin. OBS köprüsü kuruluysa yerel sekme açılır.</p><details><summary>Hiçbir şey açılmadı mı?</summary>'+Array.from(setup.querySelectorAll('p'),p=>p.outerHTML).join('')+'</details>'+btn('Kapat','modal.close()'));
+   });
+  }
   return;
  }
  let click=()=>obsConnect(),state;
